@@ -14,6 +14,46 @@ import VillagersPage from './pages/Villagers';
 import AshaPage from './pages/Asha';
 import HygienePage from './pages/Hygiene';
 import AdminPage from './pages/Admin';
+import LoginPage from './pages/Auth/LoginPage';
+
+// ─── Auth Guard ────────────────────────────────────────────────────────────
+// Shows a full-screen loader while Firebase resolves the auth state,
+// then redirects unauthenticated users to /auth.
+function AuthGuard({ children }) {
+  const { isAuthenticated, authLoading } = useAuthRole();
+
+  if (authLoading) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: '#020b18',
+        flexDirection: 'column',
+        gap: '1rem',
+      }}>
+        <div style={{
+          width: 48, height: 48,
+          border: '3px solid rgba(14,165,233,0.2)',
+          borderTop: '3px solid #0ea5e9',
+          borderRadius: '50%',
+          animation: 'spin 0.8s linear infinite',
+        }} />
+        <p style={{ color: '#64748b', fontSize: '0.9rem', fontFamily: 'system-ui' }}>
+          Loading NeerSense…
+        </p>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/auth" replace />;
+  }
+
+  return children;
+}
 
 function MainLayout() {
   // Note: React Router v6 requires <Route> elements to be DIRECT children
@@ -110,7 +150,20 @@ export default function App() {
         <AuthRoleProvider>
           <OfflineSyncProvider>
             <AlertNotificationProvider>
-              <MainLayout />
+              <Routes>
+                {/* Public auth route — no guard */}
+                <Route path="/auth" element={<LoginPage />} />
+
+                {/* All other routes require authentication */}
+                <Route
+                  path="/*"
+                  element={
+                    <AuthGuard>
+                      <MainLayout />
+                    </AuthGuard>
+                  }
+                />
+              </Routes>
             </AlertNotificationProvider>
           </OfflineSyncProvider>
         </AuthRoleProvider>

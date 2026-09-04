@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { offlineDb } from '../services/offlineDb';
-import { api } from '../services/api';
+import { firestoreService } from '../services/firestoreService';
 
 const OfflineSyncContext = createContext();
 
@@ -29,14 +29,16 @@ export const OfflineSyncProvider = ({ children }) => {
     try {
       const syms = await offlineDb.getPendingSymptoms();
       if (syms.length > 0) {
-        await api.submitSymptoms(syms);
+        for (const sym of syms) {
+          await firestoreService.submitSymptoms(sym);
+        }
         await offlineDb.removeSyncedSymptoms(syms.map(s => s.id));
       }
 
       const tests = await offlineDb.getPendingWaterTests();
       if (tests.length > 0) {
         for (const test of tests) {
-          await api.submitManualTest(test);
+          await firestoreService.submitManualTest(test);
         }
         await offlineDb.removeSyncedWaterTests(tests.map(t => t.id));
       }
@@ -73,7 +75,7 @@ export const OfflineSyncProvider = ({ children }) => {
   const queueSymptomReport = async (report) => {
     if (isOnline) {
       try {
-        await api.submitSymptoms(report);
+        await firestoreService.submitSymptoms(report);
         return { success: true, mode: 'ONLINE' };
       } catch {
         // Fallback to offline store if network fails mid-request
@@ -91,7 +93,7 @@ export const OfflineSyncProvider = ({ children }) => {
   const queueWaterTest = async (test) => {
     if (isOnline) {
       try {
-        await api.submitManualTest(test);
+        await firestoreService.submitManualTest(test);
         return { success: true, mode: 'ONLINE' };
       } catch {
         await offlineDb.saveWaterTestOffline(test);
