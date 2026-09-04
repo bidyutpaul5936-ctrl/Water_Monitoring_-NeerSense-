@@ -1,4 +1,13 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged,
+  updateProfile,
+} from 'firebase/auth';
+import { auth } from '../firebase';
+import { firestoreService } from '../services/firestoreService';
 
 const AuthRoleContext = createContext();
 
@@ -8,127 +17,181 @@ export const ROLES = {
   HYGIENE: 'hygiene',
   OFFICIAL: 'official',
   PANCHAYAT: 'panchayat',
-  ADMIN: 'admin'
+  ADMIN: 'admin',
 };
 
-const USER_PROFILES = {
-  villager: {
-    role: ROLES.VILLAGER,
-    name: '',
-    title: 'Villager / Citizen',
-    villageId: '',
-    villageName: '',
-    district: '',
-    phone: '',
-    avatar: '👨‍🌾'
-  },
-  asha: {
-    role: ROLES.ASHA,
-    name: '',
-    title: 'ASHA Field Worker',
-    ashaId: '',
-    villageId: '',
-    villageName: '',
-    district: '',
-    phone: '',
-    avatar: '👩‍⚕️'
-  },
-  hygiene: {
-    role: ROLES.HYGIENE,
-    name: '',
-    title: 'Water & Sanitation Officer',
-    department: 'Public Health & Hygiene Dept',
-    avatar: '👩‍🔬'
-  },
-  official: {
-    role: ROLES.OFFICIAL,
-    name: '',
-    title: 'Government Health Officer (CDMO)',
-    jurisdiction: 'District Health Surveillance',
-    department: 'Integrated Disease Surveillance Programme (IDSP)',
-    avatar: '🏛️'
-  },
-  panchayat: {
-    role: ROLES.PANCHAYAT,
-    name: '',
-    title: 'Gram Panchayat Representative',
-    villageId: '',
-    villageName: '',
-    avatar: '🏢'
-  },
-  admin: {
-    role: ROLES.ADMIN,
-    name: '',
-    title: 'System Administrator',
-    department: 'Health Informatics & Telemetry Admin',
-    avatar: '⚙️'
-  }
+const ROLE_DEFAULTS = {
+  villager: { title: 'Villager / Citizen', avatar: '👨‍🌾' },
+  asha: { title: 'ASHA Field Worker', avatar: '👩‍⚕️' },
+  hygiene: { title: 'Water & Sanitation Officer', avatar: '👩‍🔬' },
+  official: { title: 'Government Health Officer (CDMO)', avatar: '🏛️' },
+  panchayat: { title: 'Gram Panchayat Representative', avatar: '🏢' },
+  admin: { title: 'System Administrator', avatar: '⚙️' },
 };
 
 export const AuthRoleProvider = ({ children }) => {
-  const [activeRole, setActiveRole] = useState(() => {
-    return localStorage.getItem('neersense_role') || ROLES.VILLAGER;
-  });
+  const [firebaseUser, setFirebaseUser] = useState(null);   // Firebase Auth user
+  const [userProfile, setUserProfile] = useState(null);     // Firestore profile
+  const [activeRole, setActiveRoleState] = useState(ROLES.VILLAGER);
+  const [authLoading, setAuthLoading] = useState(true);     // true until onAuthStateChanged resolves
+  const [authError, setAuthError] = useState(null);
 
-  const currentUser = USER_PROFILES[activeRole] || USER_PROFILES.villager;
+  // ─── Listen for Firebase Auth state ───────────────────────────────────────
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, async (fbUser) => {
+      if (fbUser) {
+        setFirebaseUser(fbUser);
+        try {
+          const profile = await firestoreService.getUserProfile(fbUser.uid);
+          if (profile) {
+            setUserProfile(profile);
+            setActiveRoleState(profile.role || ROLES.VILLAGER);
+          }
+        } catch (err) {
+          console.error('Failed to load user profile:', err);
+        }
+      } else {
+        setFirebaseUser(null);
+        setUserProfile(null);
+        setActiveRoleState(ROLES.VILLAGER);
+      }
+      setAuthLoading(false);
+    });
+    return () => unsub();
+  }, []);
 
-  const setRole = (newRole) => {
-    setActiveRole(newRole);
-    localStorage.setItem('neersense_role', newRole);
-  };
-
+  // ─── Derived role flags ────────────────────────────────────────────────────
   const isGovernment = activeRole === ROLES.OFFICIAL || activeRole === ROLES.ADMIN;
-  // ASHA only true if ASHA or Govt superuser
   const isAsha = activeRole === ROLES.ASHA || isGovernment;
-  // Hygiene only true if HYGIENE or Govt superuser
   const isHygiene = activeRole === ROLES.HYGIENE || isGovernment;
   const isVillager = activeRole === ROLES.VILLAGER;
+  const isAuthenticated = !!firebaseUser;
 
-  const loginAsGovernment = (pin) => {
-    // Accepts PIN 'GOV-2025', '1234', or empty for demo convenience
-    if (!pin || pin.trim() === 'GOV-2025' || pin.trim() === '1234' || pin.trim().toLowerCase() === 'admin') {
-      setRole(ROLES.OFFICIAL);
+  // Build currentUser from Firestore profile + ROLE_DEFAULTS
+  const currentUser = userProfile
+    ? {
+        ...ROLE_DEFAULTS[userProfile.role] || ROLE_DEFAULTS.villager,
+        ...userProfile,
+      }
+    : { role: ROLES.VILLAGER, ...ROLE_DEFAULTS.villager };
+
+  // ─── Auth Actions ──────────────────────────────────────────────────────────
+
+  /**
+   * Register a new user with email/password and create a Firestore profile.
+   * @param {string} email
+   * @param {string} password
+   * @param {string} role - One of ROLES values
+   * @param {object} extraData - name, villageId, villageName, phone, etc.
+   */
+  const registerWithEmail = async (email, password, role, extraData = {}) => {
+    setAuthError(null);
+    try {
+      const cred = await createUserWithEmailAndPassword(auth, email, password);
+      const { uid } = cred.user;
+
+      // Set Firebase display name
+      if (extraData.name) {
+        await updateProfile(cred.user, { displayName: extraData.name });
+      }
+
+      // Create Firestore user profile
+      const profile = {
+        uid,
+        email,
+        role: role || ROLES.VILLAGER,
+        name: extraData.name || '',
+        villageId: extraData.villageId || '',
+        villageName: extraData.villageName || '',
+        district: extraData.district || '',
+        phone: extraData.phone || '',
+        ashaId: extraData.ashaId || '',
+        department: extraData.department || '',
+        ...ROLE_DEFAULTS[role] || ROLE_DEFAULTS.villager,
+      };
+
+      await firestoreService.createUserProfile(uid, profile);
+      setUserProfile(profile);
+      setActiveRoleState(role || ROLES.VILLAGER);
       return { success: true };
+    } catch (err) {
+      const msg = getFriendlyAuthError(err.code);
+      setAuthError(msg);
+      return { success: false, message: msg };
     }
-    return { success: false, message: 'Invalid Government Officer PIN. Try 1234 or GOV-2025' };
   };
 
-  const loginAsAsha = (pin) => {
-    if (!pin || pin.trim() === 'ASHA-071' || pin.trim() === '1234' || pin.trim().toLowerCase() === 'asha') {
-      setRole(ROLES.ASHA);
+  /**
+   * Sign in with email/password.
+   */
+  const loginWithEmail = async (email, password) => {
+    setAuthError(null);
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      // onAuthStateChanged will handle loading the profile
       return { success: true };
+    } catch (err) {
+      const msg = getFriendlyAuthError(err.code);
+      setAuthError(msg);
+      return { success: false, message: msg };
     }
-    return { success: false, message: 'Invalid ASHA Worker ID. Try 1234 or ASHA-071' };
   };
 
-  const loginAsHygiene = (pin) => {
-    if (!pin || pin.trim() === 'HYG-2025' || pin.trim() === '1234' || pin.trim().toLowerCase() === 'hygiene') {
-      setRole(ROLES.HYGIENE);
-      return { success: true };
-    }
-    return { success: false, message: 'Invalid Hygiene Dept PIN. Try 1234 or HYG-2025' };
+  /**
+   * Sign out.
+   */
+  const logout = async () => {
+    await signOut(auth);
+    setUserProfile(null);
+    setActiveRoleState(ROLES.VILLAGER);
   };
 
-  const logoutToVillager = () => {
-    setRole(ROLES.VILLAGER);
-  };
+  // Keep legacy alias used in some components
+  const logoutToVillager = logout;
+
+  // ─── Error Messages ────────────────────────────────────────────────────────
+  function getFriendlyAuthError(code) {
+    const map = {
+      'auth/email-already-in-use': 'This email is already registered. Please log in.',
+      'auth/invalid-email': 'Please enter a valid email address.',
+      'auth/weak-password': 'Password must be at least 6 characters.',
+      'auth/user-not-found': 'No account found with this email.',
+      'auth/wrong-password': 'Incorrect password. Please try again.',
+      'auth/invalid-credential': 'Incorrect email or password. Please try again.',
+      'auth/too-many-requests': 'Too many attempts. Please wait and try again.',
+      'auth/network-request-failed': 'Network error. Check your internet connection.',
+    };
+    return map[code] || 'An unexpected error occurred. Please try again.';
+  }
 
   return (
-    <AuthRoleContext.Provider 
-      value={{ 
-        activeRole, 
-        setRole, 
-        currentUser, 
-        ROLES, 
-        allProfiles: USER_PROFILES,
+    <AuthRoleContext.Provider
+      value={{
+        // State
+        firebaseUser,
+        userProfile,
+        activeRole,
+        currentUser,
+        authLoading,
+        authError,
+        isAuthenticated,
+        // Role flags
+        ROLES,
         isGovernment,
         isAsha,
         isHygiene,
         isVillager,
-        loginAsGovernment,
-        loginAsAsha,
-        loginAsHygiene,
-        logoutToVillager
+        // Auth actions
+        registerWithEmail,
+        loginWithEmail,
+        logout,
+        logoutToVillager,
+        // Legacy (no-op stubs to avoid breaking existing components)
+        setRole: () => {},
+        loginAsGovernment: () => ({ success: false, message: 'Use email login' }),
+        loginAsAsha: () => ({ success: false, message: 'Use email login' }),
+        loginAsHygiene: () => ({ success: false, message: 'Use email login' }),
+        allProfiles: ROLE_DEFAULTS,
       }}
     >
       {children}

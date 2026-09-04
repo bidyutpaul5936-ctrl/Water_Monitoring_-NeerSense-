@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { firestoreService } from '../services/firestoreService';
 import { api } from '../services/api';
 import { speechService } from '../services/speechService';
 import { useLanguage } from './LanguageContext';
@@ -16,32 +17,87 @@ export const AlertNotificationProvider = ({ children }) => {
   const [voiceAlertsEnabled, setVoiceAlertsEnabled] = useState(true);
   const [isConnected, setIsConnected] = useState(false);
 
+  // ─── Fetch persistent data from Firestore ────────────────────────────────
   const fetchFullState = useCallback(async () => {
     try {
-      const [vils, wReports, sns, syms, alts] = await Promise.all([
-        api.getVillages().catch(() => []),
-        api.getWaterReports().catch(() => []),
-        api.getSensors().catch(() => []),
-        api.getSymptoms().catch(() => []),
-        api.getAlerts().catch(() => [])
+      const [vils, wReports, syms, alts] = await Promise.all([
+        firestoreService.getVillages().catch(() => []),
+        firestoreService.getWaterReports().catch(() => []),
+        firestoreService.getSymptoms().catch(() => []),
+        firestoreService.getAlerts().catch(() => []),
       ]);
       if (Array.isArray(vils)) setVillages(vils);
       if (Array.isArray(wReports)) setWaterReports(wReports);
-      if (Array.isArray(sns)) setSensors(sns);
       if (Array.isArray(syms)) setSymptoms(syms);
       if (Array.isArray(alts)) setAlerts(alts);
     } catch (e) {
-      console.warn('Initial REST fetch fallback', e);
+      console.warn('Firestore fetch fallback', e);
+      // Try REST as a fallback if Firestore is unavailable
+      try {
+        const [vils, wReports, syms, alts] = await Promise.all([
+          api.getVillages().catch(() => []),
+          api.getWaterReports().catch(() => []),
+          api.getSymptoms().catch(() => []),
+          api.getAlerts().catch(() => [])
+        ]);
+        if (Array.isArray(vils)) setVillages(vils);
+        if (Array.isArray(wReports)) setWaterReports(wReports);
+        if (Array.isArray(syms)) setSymptoms(syms);
+        if (Array.isArray(alts)) setAlerts(alts);
+      } catch (restErr) {
+        console.warn('REST fallback also failed', restErr);
+      }
     }
   }, []);
 
+  // ─── Firestore real-time listeners ───────────────────────────────────────
   useEffect(() => {
+    // Initial load
     fetchFullState();
 
+    // Subscribe to real-time Firestore updates
+    const unsubReports = firestoreService.subscribeToWaterReports(setWaterReports);
+    const unsubAlerts = firestoreService.subscribeToAlerts((newAlerts) => {
+      setAlerts((prev) => {
+        // Detect truly new alerts and fire notifications
+        const prevIds = new Set(prev.map((a) => a.id));
+        const fresh = newAlerts.filter((a) => !prevIds.has(a.id));
+        fresh.forEach((data) => {
+          setRecentNotification({
+            type: 'CRITICAL_ALERT',
+            title: data.title,
+            message: data.message,
+            village: data.villageName,
+            id: data.id,
+            time: new Date().toLocaleTimeString(),
+          });
+          if (voiceAlertsEnabled) {
+            const voiceMsg =
+              lang === 'hi'
+                ? `चेतावनी: ${data.villageName} में पानी में जीवाणु संक्रमण बढ़ा। पानी उबालकर पिएं।`
+                : `Alert: High water contamination reported in ${data.villageName}. Boil water before drinking.`;
+            speechService.speak(voiceMsg, lang);
+          }
+        });
+        return newAlerts;
+      });
+    });
+    const unsubSymptoms = firestoreService.subscribeToSymptoms(setSymptoms);
+
+    return () => {
+      unsubReports();
+      unsubAlerts();
+      unsubSymptoms();
+    };
+  }, [fetchFullState, voiceAlertsEnabled, lang]);
+
+  // ─── WebSocket for live sensor telemetry (local Express server) ──────────
+  useEffect(() => {
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = window.location.port === '5173'
-      ? `${wsProtocol}//${window.location.hostname}:5000`
-      : `${wsProtocol}//${window.location.host}`;
+    const wsUrl =
+      window.location.port === '5173'
+        ? `${wsProtocol}//${window.location.hostname}:5000`
+        : `${wsProtocol}//${window.location.host}`;
     let ws = null;
     let reconnectTimeout = null;
 
@@ -49,50 +105,18 @@ export const AlertNotificationProvider = ({ children }) => {
       try {
         ws = new WebSocket(wsUrl);
 
-        ws.onopen = () => {
-          setIsConnected(true);
-        };
+        ws.onopen = () => { setIsConnected(true); };
 
         ws.onmessage = (event) => {
           try {
             const { type, data } = JSON.parse(event.data);
             if (type === 'INITIAL_STATE') {
-              if (data.villages) setVillages(data.villages);
-              if (data.waterReports) setWaterReports(data.waterReports);
+              // Only use sensor data from WebSocket — Firestore handles the rest
               if (data.sensors) setSensors(data.sensors);
-              if (data.symptoms) setSymptoms(data.symptoms);
-              if (data.alerts) setAlerts(data.alerts);
-            } else if (type === 'WATER_REPORTS_UPDATE') {
-              setWaterReports(data);
-            } else if (type === 'VILLAGES_UPDATE') {
-              setVillages(data);
-            } else if (type === 'NEW_SYMPTOMS') {
-              setSymptoms(prev => [...(Array.isArray(data) ? data : [data]), ...prev]);
             } else if (type === 'SENSOR_STREAM') {
               setSensors(data);
             } else if (type === 'SENSOR_UPDATE') {
-              setSensors(prev => prev.map(s => s.id === data.id ? data : s));
-            } else if (type === 'NEW_ALERT') {
-              setAlerts(prev => [data, ...prev]);
-              setRecentNotification({
-                type: 'CRITICAL_ALERT',
-                title: data.title,
-                message: data.message,
-                village: data.villageName,
-                id: data.id,
-                time: new Date().toLocaleTimeString()
-              });
-
-              if (voiceAlertsEnabled) {
-                const voiceMsg = lang === 'hi' 
-                  ? `चेतावनी: ${data.villageName} में पानी में जीवाणु संक्रमण बढ़ा। पानी उबालकर पिएं।` 
-                  : `Alert: High water contamination reported in ${data.villageName}. Boil water before drinking.`;
-                speechService.speak(voiceMsg, lang);
-              }
-            } else if (type === 'ALERT_ACKNOWLEDGED') {
-              setAlerts(prev => prev.map(a => a.id === data.id ? data : a));
-            } else if (type === 'ACTION_UPDATED' || type === 'ACTION_STATUS_CHANGED') {
-              fetchFullState();
+              setSensors((prev) => prev.map((s) => (s.id === data.id ? data : s)));
             }
           } catch (err) {
             console.warn('WS message parse error', err);
@@ -120,29 +144,31 @@ export const AlertNotificationProvider = ({ children }) => {
       if (ws) ws.close();
       if (reconnectTimeout) clearTimeout(reconnectTimeout);
     };
-  }, [fetchFullState, voiceAlertsEnabled, lang]);
+  }, []);
 
   const clearNotification = () => setRecentNotification(null);
 
   return (
-    <AlertNotificationContext.Provider value={{
-      villages,
-      waterReports,
-      sensors,
-      symptoms,
-      alerts,
-      recentNotification,
-      clearNotification,
-      voiceAlertsEnabled,
-      setVoiceAlertsEnabled,
-      isConnected,
-      refreshData: fetchFullState,
-      setVillages,
-      setWaterReports,
-      setSensors,
-      setSymptoms,
-      setAlerts
-    }}>
+    <AlertNotificationContext.Provider
+      value={{
+        villages,
+        waterReports,
+        sensors,
+        symptoms,
+        alerts,
+        recentNotification,
+        clearNotification,
+        voiceAlertsEnabled,
+        setVoiceAlertsEnabled,
+        isConnected,
+        refreshData: fetchFullState,
+        setVillages,
+        setWaterReports,
+        setSensors,
+        setSymptoms,
+        setAlerts,
+      }}
+    >
       {children}
     </AlertNotificationContext.Provider>
   );

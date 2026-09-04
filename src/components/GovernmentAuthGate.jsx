@@ -1,52 +1,50 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ShieldCheck, Lock, ArrowRight, AlertTriangle, Building2, UserCheck, ArrowLeft } from 'lucide-react';
+import { ShieldCheck, Lock, ArrowLeft, LogIn } from 'lucide-react';
 import { useAuthRole } from '../contexts/AuthRoleContext';
 
-export default function GovernmentAuthGate({ title = 'Government Official Access Required', requiredRole = 'Government', onAuthorized }) {
+/**
+ * GovernmentAuthGate
+ *
+ * Now that Firebase Auth is in use, this gate checks whether the currently
+ * signed-in user has the required role. If not, it shows a friendly "access
+ * denied" panel and offers a link to sign in with the right account.
+ *
+ * Props:
+ *   title        – heading text
+ *   requiredRole – 'ASHA' | 'HYGIENE' | 'Government'
+ *   children     – content to render when access is granted
+ */
+export default function GovernmentAuthGate({
+  title = 'Restricted Access',
+  requiredRole = 'Government',
+  children,
+  onAuthorized,
+}) {
   const navigate = useNavigate();
-  const { loginAsGovernment, loginAsAsha, loginAsHygiene, isGovernment, isAsha, currentUser } = useAuthRole();
-  const [pin, setPin] = useState('');
-  const [error, setError] = useState('');
+  const { activeRole, isAuthenticated, isGovernment, isAsha, isHygiene, ROLES } = useAuthRole();
 
-  const handleVerify = (e) => {
-    e?.preventDefault();
-    setError('');
+  // Determine if the current user is allowed
+  const isAllowed =
+    requiredRole === 'ASHA'
+      ? isAsha
+      : requiredRole === 'HYGIENE'
+      ? isHygiene
+      : isGovernment; // 'Government' or anything else
 
-    if (requiredRole === 'ASHA') {
-      const res = loginAsAsha(pin);
-      if (res.success) {
-        onAuthorized && onAuthorized();
-      } else {
-        setError(res.message);
-      }
-    } else if (requiredRole === 'HYGIENE') {
-      const res = loginAsHygiene(pin);
-      if (res.success) {
-        onAuthorized && onAuthorized();
-      } else {
-        setError(res.message);
-      }
-    } else {
-      const res = loginAsGovernment(pin);
-      if (res.success) {
-        onAuthorized && onAuthorized();
-      } else {
-        setError(res.message);
-      }
-    }
-  };
+  // If allowed, render children (or call onAuthorized for the old API)
+  if (isAllowed) {
+    if (onAuthorized) { onAuthorized(); return null; }
+    return children ?? null;
+  }
 
-  const handleQuickDemoAuth = () => {
-    if (requiredRole === 'ASHA') {
-      loginAsAsha('1234');
-    } else if (requiredRole === 'HYGIENE') {
-      loginAsHygiene('1234');
-    } else {
-      loginAsGovernment('GOV-2025');
-    }
-    onAuthorized && onAuthorized();
-  };
+  // Not allowed — show access denied panel
+  const roleLabel =
+    requiredRole === 'ASHA'
+      ? 'ASHA / ANM Field Worker'
+      : requiredRole === 'HYGIENE'
+      ? 'Water & Sanitation Officer'
+      : 'District Health Official / Admin';
 
   return (
     <div className="max-w-md mx-auto my-12 p-6 bg-white rounded-2xl border-2 border-sky-300 shadow-xl text-center space-y-5">
@@ -61,59 +59,32 @@ export default function GovernmentAuthGate({ title = 'Government Official Access
         </div>
         <h2 className="text-xl font-extrabold text-sky-950">{title}</h2>
         <p className="text-xs text-slate-600 mt-2 leading-relaxed">
-          {requiredRole === 'ASHA' 
-            ? 'Access restricted to registered ASHA / ANM field healthcare workers for water testing and patient case triage.' 
+          {requiredRole === 'ASHA'
+            ? 'This section is restricted to registered ASHA / ANM field healthcare workers.'
             : requiredRole === 'HYGIENE'
-            ? 'Access restricted to the District Hygiene & Sanitation Department for water safety classification.'
-            : 'Access restricted to District Health Administration & Jal Shakti Officials. Only authorized Government officials have the authority to verify, approve, and publish reports to the villagers website.'}
+            ? 'This section is restricted to the District Hygiene & Sanitation Department.'
+            : 'This section is restricted to District Health Administration & Jal Shakti Officials.'}
+        </p>
+        <p className="text-xs text-slate-500 mt-2">
+          Required role: <strong className="text-sky-800">{roleLabel}</strong><br />
+          Your current role: <strong className="text-slate-700">{activeRole}</strong>
         </p>
       </div>
 
-      <form onSubmit={handleVerify} className="space-y-3 text-left">
-        <div>
-          <label className="block text-xs font-bold text-sky-900 mb-1">
-            {requiredRole === 'ASHA' ? 'ASHA Worker ID / Passcode' : requiredRole === 'HYGIENE' ? 'Hygiene Dept PIN / Passcode' : 'Government Officer PIN / ID'}
-          </label>
-          <input
-            type="password"
-            value={pin}
-            onChange={(e) => setPin(e.target.value)}
-            placeholder={requiredRole === 'ASHA' ? 'Enter ASHA ID (e.g. 1234)' : requiredRole === 'HYGIENE' ? 'Enter Hygiene PIN (e.g. 1234)' : 'Enter PIN (e.g. 1234 or GOV-2025)'}
-            className="w-full px-3.5 py-2.5 rounded-lg border border-sky-300 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-          />
-        </div>
-
-        {error && (
-          <div className="flex items-center gap-1.5 text-xs text-red-600 bg-red-50 p-2 rounded border border-red-200">
-            <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-            <span>{error}</span>
-          </div>
-        )}
-
-        <button
-          type="submit"
-          className="w-full py-2.5 px-4 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-lg transition shadow flex items-center justify-center gap-2 text-xs"
-        >
-          <ShieldCheck className="w-4 h-4" />
-          <span>Authenticate & Unlock Access</span>
-        </button>
-      </form>
-
-      <div className="pt-3 border-t border-sky-100">
-        <p className="text-2xs text-slate-500 mb-2 font-medium">Evaluation / Demo Fast Access:</p>
+      <div className="space-y-2">
         <button
           type="button"
-          onClick={handleQuickDemoAuth}
-          className="w-full py-2 px-3 bg-sky-50 hover:bg-sky-100 text-sky-800 font-semibold rounded-lg border border-sky-200 text-xs transition flex items-center justify-center gap-1.5"
+          onClick={() => navigate('/auth')}
+          className="w-full py-2.5 px-4 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-lg transition shadow flex items-center justify-center gap-2 text-xs"
         >
-          <UserCheck className="w-3.5 h-3.5 text-sky-600" />
-          <span>Quick Login as {requiredRole === 'ASHA' ? 'Kuni Majhi (ASHA-071)' : requiredRole === 'HYGIENE' ? 'Dr. Meena Kumari' : 'Dr. Suresh Mishra (CDMO)'}</span>
+          <LogIn className="w-4 h-4" />
+          <span>Sign in with the correct account</span>
         </button>
 
         <button
           type="button"
           onClick={() => navigate('/villagers')}
-          className="mt-3 text-xs text-sky-700 hover:text-sky-950 font-medium transition flex items-center justify-center gap-1 w-full"
+          className="mt-2 text-xs text-sky-700 hover:text-sky-950 font-medium transition flex items-center justify-center gap-1 w-full"
         >
           <ArrowLeft className="w-3 h-3" />
           <span>Return to Public Villagers Portal</span>

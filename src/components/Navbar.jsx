@@ -28,7 +28,8 @@ import USSDSimulatorModal from './USSDSimulatorModal';
 export default function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { activeRole, setRole, currentUser, isGovernment, isAsha, isHygiene, isVillager, logoutToVillager } = useAuthRole();
+  const { activeRole, currentUser, isGovernment, isAsha, isHygiene, isVillager, logout, firebaseUser } = useAuthRole();
+  const handleLogout = async () => { await (logout || (() => {}))(); navigate('/auth'); };
   const { lang, setLang, languages } = useLanguage();
   const { isOnline, totalPending, isSyncing, syncNow } = useOfflineSync();
   const { waterReports } = useAlertNotification();
@@ -69,14 +70,14 @@ export default function Navbar() {
               <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-sky-800 text-sky-100 border border-sky-700 text-xs">
                 <span>{currentUser.avatar}</span>
                 <span className="font-semibold text-2xs sm:text-xs">
-                  {currentUser.name || currentUser.title || 'Authorized Staff'}
+                  {currentUser.name || firebaseUser?.email || currentUser.title || 'Authorized Staff'}
                 </span>
-                {currentUser.name && currentUser.title && (
+                {(currentUser.name || firebaseUser?.email) && currentUser.title && (
                   <span className="text-3xs text-sky-300">({currentUser.department || currentUser.title})</span>
                 )}
               </span>
               <button
-                onClick={logoutToVillager}
+                onClick={handleLogout}
                 className="inline-flex items-center gap-1 text-2xs text-amber-200 hover:text-white bg-sky-800/80 px-2 py-0.5 rounded border border-sky-700 transition cursor-pointer"
                 title="Log out of this dedicated department portal"
               >

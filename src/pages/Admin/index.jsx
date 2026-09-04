@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Building2, ShieldCheck, CheckCircle2, FileCheck, Eye, SlidersHorizontal, Activity } from 'lucide-react';
+import { Building2, ShieldCheck, CheckCircle2, FileCheck, Eye, SlidersHorizontal, Activity, Database } from 'lucide-react';
 import { useAuthRole } from '../../contexts/AuthRoleContext';
 import { useAlertNotification } from '../../contexts/AlertNotificationContext';
 import { api } from '../../services/api';
+import { seedNeerSenseData } from '../../services/seedData';
 import GovernmentAuthGate from '../../components/GovernmentAuthGate';
 
 import GovtReportVerificationDesk from './GovtReportVerificationDesk';
@@ -43,6 +44,22 @@ export default function AdminPage() {
     }
   };
 
+  const [seeding, setSeeding] = useState(false);
+  const handleSeedData = async () => {
+    if (!confirm('Seed Firestore with all 7 NeerSense demo villages? This is safe to run multiple times (idempotent).')) return;
+    setSeeding(true);
+    try {
+      const result = await seedNeerSenseData();
+      refreshData();
+      setToastMessage({ type: 'success', text: `✅ Seeded ${result.villages} villages into Firestore.${result.errors.length ? ' Some errors: ' + result.errors.join('; ') : ''}` });
+    } catch (err) {
+      setToastMessage({ type: 'error', text: `Seed failed: ${err.message}` });
+    } finally {
+      setSeeding(false);
+      setTimeout(() => setToastMessage(null), 6000);
+    }
+  };
+
   return (
     <div className="max-w-screen-xl mx-auto px-4 py-6 space-y-6">
       {/* Government Top Header Banner */}
@@ -66,6 +83,16 @@ export default function AdminPage() {
           <SystemControlToolbar
             onClearAll={handleClearAll}
           />
+          <button
+            id="seed-firestore-btn"
+            onClick={handleSeedData}
+            disabled={seeding}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-300 rounded-lg hover:bg-emerald-100 transition disabled:opacity-60"
+            title="Seed Firestore with NeerSense demo village data"
+          >
+            <Database className="w-3.5 h-3.5" />
+            {seeding ? 'Seeding…' : '🌱 Seed Firestore Data'}
+          </button>
         </div>
       </div>
 
