@@ -95,7 +95,7 @@ function MainLayout() {
             <span>&bull; Smart Water-Borne Disease Early Warning System</span>
           </div>
           <div className="text-2xs text-sky-800">
-            Ministry of Jal Shakti &bull; Ministry of Health &amp; Family Welfare &bull; SIH 2025 (PS 25001)
+            Ministry of Jal Shakti &bull; Ministry of Health &amp; Family Welfare &bull; SIH 2026 (PS 25001)
           </div>
         </div>
       </footer>
