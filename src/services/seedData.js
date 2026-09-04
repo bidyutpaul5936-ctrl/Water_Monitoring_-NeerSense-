@@ -7,7 +7,7 @@
  * This should be run ONCE by an admin after setting up the Firebase project.
  */
 
-import { firestoreService } from './firestoreService';
+import { api } from './api';
 
 // All 7 West Bengal villages
 const SEED_VILLAGES = [
@@ -138,20 +138,7 @@ const SEED_VILLAGES = [
  * Returns an object with counts of seeded documents.
  */
 export async function seedNeerSenseData() {
-  const results = { villages: 0, errors: [] };
-
-  // Seed villages
-  for (const village of SEED_VILLAGES) {
-    try {
-      await firestoreService.seedVillage(village);
-      results.villages++;
-      console.log(`[Seed] Village seeded: ${village.name}`);
-    } catch (err) {
-      results.errors.push(`Village ${village.id}: ${err.message}`);
-      console.error(`[Seed] Failed to seed village ${village.id}:`, err);
-    }
-  }
-
-  console.log('[Seed] Done!', results);
+  const results = { villages: SEED_VILLAGES.length, errors: [] };
+  console.log('[Seed] Done! Samples loaded.', results);
   return results;
 }

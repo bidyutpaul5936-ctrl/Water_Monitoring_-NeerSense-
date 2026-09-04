@@ -18,8 +18,8 @@ import { useAlertNotification } from '../../contexts/AlertNotificationContext';
 import { api } from '../../services/api';
 
 export default function GovtReportVerificationDesk() {
-  const { currentUser } = useAuthRole();
-  const { waterReports } = useAlertNotification();
+  const { currentUser = {} } = useAuthRole() || {};
+  const { waterReports = [] } = useAlertNotification() || {};
 
   const [verifyingId, setVerifyingId] = useState(null);
   const [rejectingId, setRejectingId] = useState(null);
@@ -29,9 +29,11 @@ export default function GovtReportVerificationDesk() {
   const [rejectReason, setRejectReason] = useState({});
   const [processing, setProcessing] = useState(false);
 
-  const pendingReports = waterReports.filter(r => r.status === 'PENDING_APPROVAL');
-  const awaitingHygiene = waterReports.filter(r => r.status === 'PENDING_CLASSIFICATION' || (!r.status && !r.isApproved));
-  const approvedReports = waterReports.filter(r => r.status === 'APPROVED' || r.isApproved === true);
+  const safeWaterReports = Array.isArray(waterReports) ? waterReports : [];
+
+  const pendingReports = safeWaterReports.filter(r => r && (r.status === 'PENDING_APPROVAL' || r.status === 'PENDING_VERIFICATION'));
+  const awaitingHygiene = safeWaterReports.filter(r => r && (r.status === 'PENDING_CLASSIFICATION' || (!r.status && !r.isApproved)));
+  const approvedReports = safeWaterReports.filter(r => r && (r.status === 'APPROVED' || r.isApproved === true));
 
   const handleApprove = async (report) => {
     setProcessing(true);

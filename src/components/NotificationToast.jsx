@@ -2,11 +2,13 @@ import React from 'react';
 import { AlertCircle, X, Volume2, ShieldAlert, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAlertNotification } from '../contexts/AlertNotificationContext';
+import { useAuthRole, ROLES } from '../contexts/AuthRoleContext';
 import { speechService } from '../services/speechService';
 import { useLanguage } from '../contexts/LanguageContext';
 
 export default function NotificationToast() {
   const { recentNotification, clearNotification } = useAlertNotification();
+  const { activeRole, isGovernment } = useAuthRole();
   const { lang } = useLanguage();
 
   if (!recentNotification) return null;
@@ -46,7 +48,7 @@ export default function NotificationToast() {
               <Volume2 className="w-3.5 h-3.5" /> Listen
             </button>
             <Link
-              to="/villagers"
+              to={isGovernment ? '/admin' : activeRole === ROLES.ASHA ? '/asha' : activeRole === ROLES.HYGIENE ? '/hygiene' : '/villagers'}
               onClick={clearNotification}
               className="btn-primary text-xs px-3 py-1 ml-auto flex items-center gap-1.5"
             >

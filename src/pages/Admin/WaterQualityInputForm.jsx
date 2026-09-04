@@ -4,7 +4,7 @@ import { useAlertNotification } from '../../contexts/AlertNotificationContext';
 import { api } from '../../services/api';
 
 export default function WaterQualityInputForm({ onSuccess }) {
-  const { villages, refreshData } = useAlertNotification();
+  const { villages = [], refreshData = () => {} } = useAlertNotification() || {};
 
   const [villageId, setVillageId] = useState('vil-01');
   const [sourceName, setSourceName] = useState('');
@@ -18,7 +18,8 @@ export default function WaterQualityInputForm({ onSuccess }) {
   const [testedBy, setTestedBy] = useState('District Water Quality Testing Lab (Admin)');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const selectedVillage = villages.find(v => v.id === villageId) || villages[0] || {};
+  const safeVillages = Array.isArray(villages) ? villages : [];
+  const selectedVillage = safeVillages.find(v => v && v.id === villageId) || safeVillages[0] || {};
 
   const handleStatusChange = (newStatus) => {
     setSafetyStatus(newStatus);
@@ -107,7 +108,7 @@ export default function WaterQualityInputForm({ onSuccess }) {
               onChange={(e) => setVillageId(e.target.value)}
               className="form-select"
             >
-              {villages.map(v => (
+              {safeVillages.map(v => (
                 <option key={v.id} value={v.id}>{v.name} ({v.district}, {v.state})</option>
               ))}
             </select>
