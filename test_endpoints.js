@@ -34,7 +34,7 @@ async function testAll() {
     })).json();
     console.log('✅ 4. USSD Menu Query (*999#):\n', ussdMenu.message.split('\n').map(l => '     ' + l).join('\n'));
 
-    // USSD Symptom Report (Diarrhea in Majuli)
+    // USSD Symptom Report (Diarrhea in Gosaba)
     const ussdReport = await (await fetch(`${BASE}/ussd`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -47,8 +47,8 @@ async function testAll() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        villageId: 'vil-03',
-        patientName: 'Pooja Nayak',
+        villageId: 'vil-02',
+        patientName: 'Pooja Mondal',
         age: 18,
         gender: 'Female',
         symptoms: ['Watery Diarrhea', 'Severe Vomiting'],
@@ -58,17 +58,17 @@ async function testAll() {
         reportedBy: 'Kuni Majhi (ASHA-071)'
       })
     })).json();
-    console.log(`✅ 5. ASHA Field Case Submitted: ID=${symReport.items[0].id}, Village=vil-03`);
+    console.log(`✅ 5. ASHA Field Case Submitted: ID=${symReport.items[0].id}, Village=vil-02`);
 
     // 6. Submit Manual H2S Test Kit Result
     const manualTest = await (await fetch(`${BASE}/manual-tests`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        villageId: 'vil-03',
+        villageId: 'vil-02',
         ashaId: 'ASHA-071',
-        sourceName: 'Thuamul Spring Water Collection Point',
-        sourceType: 'Natural Spring',
+        sourceName: 'Gangasagar Deep Tube Well Collection Point',
+        sourceType: 'Tube Well',
         h2sVialResult: 'BLACK_POSITIVE',
         phStripValue: 6.0,
         freeChlorinePpm: 0.0,
@@ -84,9 +84,9 @@ async function testAll() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ villageId: 'vil-01', severity: 'CRITICAL' })
     })).json();
-    console.log(`✅ 7. Injected Contamination Spike into ${spikeRes.targetSensor.name}:`);
-    console.log(`   - New Turbidity: ${spikeRes.targetSensor.currentReadings.turbidity} NTU, E.coli: ${spikeRes.targetSensor.currentReadings.bacterialCfu} CFU/100ml`);
-    console.log(`   - Majuli Updated Risk Score: ${spikeRes.village.riskScore}/100 (${spikeRes.village.riskLevel})`);
+    console.log(`✅ 7. Injected Contamination Spike into ${spikeRes.targetSensor?.name || 'Gosaba Sensor'}:`);
+    console.log(`   - New Turbidity: ${spikeRes.targetSensor?.currentReadings?.turbidity} NTU, E.coli: ${spikeRes.targetSensor?.currentReadings?.bacterialCfu} CFU/100ml`);
+    console.log(`   - Gosaba Updated Risk Score: ${spikeRes.village?.riskScore}/100 (${spikeRes.village?.riskLevel})`);
 
     // 8. Alerts
     const alertsRes = await fetch(`${BASE}/alerts`);

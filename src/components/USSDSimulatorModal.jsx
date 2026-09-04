@@ -15,7 +15,7 @@ export default function USSDSimulatorModal({ isOpen, onClose }) {
   const [phoneNum, setPhoneNum] = useState('+91-98765-43210');
 
   // SMS State
-  const [smsBody, setSmsBody] = useState('REPORT CHOLERA MAJULI 2');
+  const [smsBody, setSmsBody] = useState('REPORT CHOLERA GOSABA 2');
   const [smsReplies, setSmsReplies] = useState([
     { type: 'system', text: 'SMS Gateway Ready (Zero-Internet Zone Fallback)' }
   ]);
@@ -200,16 +200,16 @@ export default function USSDSimulatorModal({ isOpen, onClose }) {
                     }}
                     className="px-2.5 py-1.5 rounded-lg bg-rose-950/70 hover:bg-rose-900 border border-rose-700/60 text-rose-200 text-xs text-left"
                   >
-                    ⚡ Report Diarrhea (Majuli)
+                    ⚡ Report Diarrhea (Gosaba)
                   </button>
                   <button
                     onClick={() => {
-                      setDialInput('1*3');
-                      handleUssdSubmit('1*3');
+                      setDialInput('1*2');
+                      handleUssdSubmit('1*2');
                     }}
                     className="px-2.5 py-1.5 rounded-lg bg-amber-950/70 hover:bg-amber-900 border border-amber-700/60 text-amber-200 text-xs text-left"
                   >
-                    ⚡ Report Diarrhea (Thuamul)
+                    ⚡ Report Diarrhea (Sagar Island)
                   </button>
                   <button
                     onClick={() => {
@@ -286,16 +286,16 @@ export default function USSDSimulatorModal({ isOpen, onClose }) {
             <div className="flex flex-wrap gap-2 text-xs">
               <span className="text-slate-400 text-xs self-center">Templates:</span>
               <button
-                onClick={() => setSmsBody('REPORT CHOLERA MAJULI 2')}
+                onClick={() => setSmsBody('REPORT CHOLERA GOSABA 2')}
                 className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-sky-300 border border-slate-700"
               >
-                REPORT CHOLERA MAJULI 2
+                REPORT CHOLERA GOSABA 2
               </button>
               <button
-                onClick={() => setSmsBody('REPORT DIARRHEA THUAMUL 3')}
+                onClick={() => setSmsBody('REPORT DIARRHEA SAGAR 3')}
                 className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-sky-300 border border-slate-700"
               >
-                REPORT DIARRHEA THUAMUL 3
+                REPORT DIARRHEA SAGAR 3
               </button>
               <button
                 onClick={() => setSmsBody('STATUS WATER GOSABA')}
@@ -311,7 +311,7 @@ export default function USSDSimulatorModal({ isOpen, onClose }) {
                 type="text"
                 value={smsBody}
                 onChange={(e) => setSmsBody(e.target.value)}
-                placeholder="Type SMS (e.g. REPORT CHOLERA MAJULI)"
+                placeholder="Type SMS (e.g. REPORT CHOLERA GOSABA)"
                 className="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white font-mono outline-none focus:border-sky-500"
                 onKeyDown={(e) => e.key === 'Enter' && handleSmsSend()}
               />

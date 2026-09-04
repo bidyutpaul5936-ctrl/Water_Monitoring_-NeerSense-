@@ -16,18 +16,18 @@ const USER_PROFILES = {
     role: ROLES.VILLAGER,
     name: 'Suresh Das',
     villageId: 'vil-01',
-    villageName: 'Majuli Char (Kamalabari)',
-    district: 'Majuli, Assam',
+    villageName: 'Gosaba Island (Rangabelia)',
+    district: 'South 24 Parganas, West Bengal',
     phone: '+91-98765-12345',
     avatar: '👨‍🌾'
   },
   asha: {
     role: ROLES.ASHA,
-    name: 'Kuni Majhi',
-    ashaId: 'ASHA-071',
-    villageId: 'vil-03',
-    villageName: 'Thuamul Rampur',
-    district: 'Kalahandi, Odisha',
+    name: 'Priyanka Mondal',
+    ashaId: 'ASHA-109',
+    villageId: 'vil-01',
+    villageName: 'Gosaba Island (Rangabelia)',
+    district: 'South 24 Parganas, West Bengal',
     phone: '+91-94371-99881',
     avatar: '👩‍⚕️'
   },
@@ -35,28 +35,28 @@ const USER_PROFILES = {
     role: ROLES.HYGIENE,
     name: 'Dr. Meena Kumari',
     title: 'District Water & Sanitation Officer',
-    department: 'Hygiene & Public Health Dept',
+    department: 'West Bengal Public Health & Hygiene Dept',
     avatar: '👩‍🔬'
   },
   official: {
     role: ROLES.OFFICIAL,
     name: 'Dr. Suresh Mishra, CDMO',
     title: 'Chief District Medical Officer & Surveillance In-Charge',
-    jurisdiction: 'All Monitored Districts',
-    department: 'Integrated Disease Surveillance Programme (IDSP)',
+    jurisdiction: 'West Bengal Monitored Districts',
+    department: 'Integrated Disease Surveillance Programme (IDSP WB)',
     avatar: '🏛️'
   },
   panchayat: {
     role: ROLES.PANCHAYAT,
-    name: 'Bhaben Kalita',
-    title: 'Sarpanch / Panchayat Head',
+    name: 'Subrata Das',
+    title: 'Pradhan / Panchayat Head',
     villageId: 'vil-01',
-    villageName: 'Majuli Char Panchayat',
+    villageName: 'Rangabelia Gram Panchayat (Gosaba, WB)',
     avatar: '🏢'
   },
   admin: {
     role: ROLES.ADMIN,
-    name: 'Admin - NIC Health Informatics',
+    name: 'Admin - NIC Health Informatics WB',
     title: 'System & IoT Telemetry Administrator',
     avatar: '⚙️'
   }

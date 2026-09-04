@@ -14,25 +14,28 @@ import { useAuthRole } from '../../contexts/AuthRoleContext';
 import { api } from '../../services/api';
 
 const VILLAGE_OPTIONS = [
-  { id: 'vil-01', name: 'Majuli Char (Kamalabari)', district: 'Majuli, Assam', defaultSource: 'Brahmaputra River Intake & Well' },
-  { id: 'vil-02', name: 'Gosaba Island (Rangabelia)', district: 'South 24 Parganas, West Bengal', defaultSource: 'Community Deep Tube Well #2' },
-  { id: 'vil-03', name: 'Thuamul Rampur (Dhanurjaya)', district: 'Kalahandi, Odisha', defaultSource: 'Village Ring Well #3' },
-  { id: 'vil-04', name: 'Tauru Sub-division (Hassanpur)', district: 'Nuh, Haryana', defaultSource: 'Canal Supply Standpost' },
-  { id: 'vil-05', name: 'Abujhmad Foothills (Kaspal)', district: 'Narayanpur, Chhattisgarh', defaultSource: 'Forest Spring & Mark-II Handpump' }
+  { id: 'vil-01', name: 'Gosaba Island (Rangabelia)', district: 'South 24 Parganas, West Bengal', defaultSource: 'Pond Sand Filter & Deep Tube Wells' },
+  { id: 'vil-02', name: 'Sagar Island (Gangasagar)', district: 'South 24 Parganas, West Bengal', defaultSource: 'Deep Tube Well & Pond Sand Filter' },
+  { id: 'vil-03', name: 'Kakdwip (Harwood Point)', district: 'South 24 Parganas, West Bengal', defaultSource: 'Piped Water Supply & Mark-II Tube Wells' },
+  { id: 'vil-04', name: 'Basanti (Sonakhali Char)', district: 'South 24 Parganas, West Bengal', defaultSource: 'Pond Sand Filter & Handpumps' },
+  { id: 'vil-05', name: 'Khatra (Mukutmanipur Dam)', district: 'Bankura, West Bengal', defaultSource: 'Dam Intake & Deep Bore Wells' },
+  { id: 'vil-06', name: 'Jhargram (Belpahari Forest)', district: 'Jhargram, West Bengal', defaultSource: 'Hilly Natural Spring & Ring Wells' },
+  { id: 'vil-07', name: 'Digha (Shankarpur Coastal)', district: 'Purba Medinipur, West Bengal', defaultSource: 'Deep Tube Well (Reverse Osmosis Unit)' },
+  { id: 'vil-08', name: 'Kaliachak (Sujapur GP)', district: 'Malda, West Bengal', defaultSource: 'Deep Aquifer Tube Wells & Standposts' }
 ];
 
 export default function AshaWaterDataEntryForm({ onReportSubmitted }) {
   const { currentUser } = useAuthRole();
 
-  const [selectedVillageId, setSelectedVillageId] = useState('vil-03');
-  const [sourceName, setSourceName] = useState('Dhanurjaya Primary School Handpump');
+  const [selectedVillageId, setSelectedVillageId] = useState('vil-01');
+  const [sourceName, setSourceName] = useState('');
   const [sourceType, setSourceType] = useState('Tube Well / Handpump');
   
   // Chemical & Microbiological Parameters
-  const [ph, setPh] = useState('7.2');
-  const [turbidity, setTurbidity] = useState('2.5');
-  const [tds, setTds] = useState('240');
-  const [bacterialCfu, setBacterialCfu] = useState('0');
+  const [ph, setPh] = useState('');
+  const [turbidity, setTurbidity] = useState('');
+  const [tds, setTds] = useState('');
+  const [bacterialCfu, setBacterialCfu] = useState('');
   const [h2sVialResult, setH2sVialResult] = useState('YELLOW_SAFE'); // 'YELLOW_SAFE' or 'BLACK_CONTAMINATED'
   
   // Health observations from the community
@@ -46,6 +49,15 @@ export default function AshaWaterDataEntryForm({ onReportSubmitted }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!sourceName.trim()) {
+      alert('Please enter the name of the water source tested.');
+      return;
+    }
+    if (!ph || !turbidity) {
+      alert('Please enter measured pH and Turbidity test values.');
+      return;
+    }
+
     setIsSubmitting(true);
     setSubmitSuccess(false);
 
@@ -53,16 +65,16 @@ export default function AshaWaterDataEntryForm({ onReportSubmitted }) {
       const payload = {
         villageId: selectedVillage.id,
         villageName: selectedVillage.name,
-        sourceName,
+        sourceName: sourceName.trim(),
         sourceType,
-        ph: parseFloat(ph) || 7.0,
-        turbidity: parseFloat(turbidity) || 1.0,
-        tds: parseFloat(tds) || 200,
+        ph: parseFloat(ph),
+        turbidity: parseFloat(turbidity),
+        tds: parseFloat(tds) || 0,
         bacterialCfu: parseInt(bacterialCfu) || 0,
         h2sVialResult,
         submittedBy: currentUser.name || 'Kuni Majhi (ASHA-071)',
         submissionRole: 'ASHA',
-        ashaFieldNotes: ashaFieldNotes || 'Field inspection completed during routine village health survey.',
+        ashaFieldNotes: ashaFieldNotes || 'Field inspection completed by ASHA worker.',
         status: 'PENDING_CLASSIFICATION', // Awaiting Hygiene Dept classification
         isApproved: false
       };
@@ -71,7 +83,12 @@ export default function AshaWaterDataEntryForm({ onReportSubmitted }) {
       setSubmittedReportId(res.report?.id || 'new');
       setSubmitSuccess(true);
       
-      // Reset form observations
+      // Reset form fields after successful submission
+      setSourceName('');
+      setPh('');
+      setTurbidity('');
+      setTds('');
+      setBacterialCfu('');
       setAshaFieldNotes('');
       onReportSubmitted && onReportSubmitted(res.report);
     } catch (err) {
@@ -121,11 +138,7 @@ export default function AshaWaterDataEntryForm({ onReportSubmitted }) {
             <label className="block text-2xs font-bold text-sky-900 mb-1">Monitored Village</label>
             <select
               value={selectedVillageId}
-              onChange={(e) => {
-                setSelectedVillageId(e.target.value);
-                const v = VILLAGE_OPTIONS.find(opt => opt.id === e.target.value);
-                if (v) setSourceName(v.defaultSource);
-              }}
+              onChange={(e) => setSelectedVillageId(e.target.value)}
               className="w-full text-xs p-2 rounded-lg border border-sky-300 bg-white font-medium focus:ring-2 focus:ring-sky-500"
             >
               {VILLAGE_OPTIONS.map(v => (
@@ -141,7 +154,7 @@ export default function AshaWaterDataEntryForm({ onReportSubmitted }) {
               value={sourceName}
               onChange={(e) => setSourceName(e.target.value)}
               required
-              placeholder="e.g. Primary School Handpump"
+              placeholder="e.g. Community Handpump #1"
               className="w-full text-xs p-2 rounded-lg border border-sky-300 bg-white focus:ring-2 focus:ring-sky-500"
             />
           </div>
@@ -174,6 +187,7 @@ export default function AshaWaterDataEntryForm({ onReportSubmitted }) {
               value={ph}
               onChange={(e) => setPh(e.target.value)}
               required
+              placeholder="e.g. 7.2"
               className="w-full text-xs p-2 rounded border border-sky-300 bg-white font-mono"
             />
           </div>
@@ -188,6 +202,7 @@ export default function AshaWaterDataEntryForm({ onReportSubmitted }) {
               value={turbidity}
               onChange={(e) => setTurbidity(e.target.value)}
               required
+              placeholder="e.g. 2.1"
               className="w-full text-xs p-2 rounded border border-sky-300 bg-white font-mono"
             />
           </div>
@@ -200,6 +215,20 @@ export default function AshaWaterDataEntryForm({ onReportSubmitted }) {
               type="number"
               value={tds}
               onChange={(e) => setTds(e.target.value)}
+              placeholder="e.g. 220"
+              className="w-full text-xs p-2 rounded border border-sky-300 bg-white font-mono"
+            />
+          </div>
+
+          <div>
+            <label className="block text-2xs font-bold text-sky-950 mb-0.5">
+              Bacterial Count <span className="text-slate-400 font-normal">(CFU/100ml)</span>
+            </label>
+            <input
+              type="number"
+              value={bacterialCfu}
+              onChange={(e) => setBacterialCfu(e.target.value)}
+              placeholder="e.g. 0"
               className="w-full text-xs p-2 rounded border border-sky-300 bg-white font-mono"
             />
           </div>

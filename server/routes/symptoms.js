@@ -18,7 +18,7 @@ router.post('/', (req, res) => {
     const newSymptom = {
       id: item.id || `sym-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
       villageId: item.villageId || 'vil-01',
-      villageName: item.villageName || (state.villages.find(v => v.id === item.villageId)?.name || 'Majuli Char'),
+      villageName: item.villageName || (state.villages.find(v => v.id === item.villageId)?.name || 'Gosaba Island (Rangabelia)'),
       patientName: item.patientName || 'Anonymous Villager',
       age: Number(item.age) || 28,
       gender: item.gender || 'Other',

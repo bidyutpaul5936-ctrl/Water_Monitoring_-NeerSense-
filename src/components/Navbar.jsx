@@ -42,7 +42,7 @@ export default function Navbar() {
 
   const navItems = [
     { path: '/',           label: 'Home',                  icon: Home,      isAllowed: true },
-    { path: '/villagers',  label: 'Villagers Portal',       icon: Users,     isAllowed: isVillager || isGovernment },
+    { path: '/villagers',  label: 'Villagers Portal',       icon: Users,     isAllowed: location.pathname !== '/' && (isVillager || isGovernment) },
     { path: '/asha',       label: 'ASHA Workers',           icon: Activity,  isAllowed: (activeRole === ROLES.ASHA) || isGovernment },
     { path: '/hygiene',    label: 'Hygiene & Water Safety', icon: BookOpen,  isAllowed: (activeRole === ROLES.HYGIENE) || isGovernment },
     { path: '/admin',      label: 'Government Admin',       icon: Building2, isAllowed: isGovernment },

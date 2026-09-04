@@ -48,7 +48,7 @@ export default function WaterQualityInputForm({ onSuccess }) {
     try {
       const payload = {
         villageId,
-        villageName: selectedVillage.name || 'Majuli Char',
+        villageName: selectedVillage.name || 'Gosaba Island (Rangabelia)',
         sourceName,
         sourceType,
         ph: Number(ph),
