@@ -1,5 +1,5 @@
 import React from 'react';
-import { HeartPulse, AlertTriangle, ShieldCheck, Stethoscope } from 'lucide-react';
+import { HeartPulse, AlertTriangle, ShieldCheck, Stethoscope, ArrowLeft, RotateCcw } from 'lucide-react';
 
 const treatmentData = {
   diarrhea: {
@@ -161,7 +161,7 @@ function getSeverityConfig(level) {
   }
 }
 
-export default function InstantTreatmentGuide({ selectedSymptoms = [] }) {
+export default function InstantTreatmentGuide({ selectedSymptoms = [], onBack }) {
   if (selectedSymptoms.length === 0) {
     return (
       <div className="card">
@@ -194,8 +194,8 @@ export default function InstantTreatmentGuide({ selectedSymptoms = [] }) {
   const severityConfig = getSeverityConfig(severity);
 
   return (
-    <div className="card">
-      <div className="card-header bg-sky-100/70 border-b border-sky-200">
+    <div className="card border-sky-300 shadow-md">
+      <div className="card-header bg-sky-100/70 border-b border-sky-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <HeartPulse className="w-5 h-5 text-sky-700" />
           <div>
@@ -203,9 +203,23 @@ export default function InstantTreatmentGuide({ selectedSymptoms = [] }) {
             <p className="text-2xs text-sky-700">चयनित लक्षणों के आधार पर तत्काल उपचार</p>
           </div>
         </div>
-        <span className={`badge ${severityConfig.badgeClass}`}>
-          {severityConfig.icon} {severity === 'critical' ? 'Critical' : severity === 'severe' ? 'Severe' : 'Moderate'}
-        </span>
+
+        <div className="flex items-center gap-2.5">
+          {onBack && (
+            <button
+              type="button"
+              onClick={onBack}
+              className="btn btn-secondary text-xs px-3.5 py-1.5 flex items-center gap-1.5 bg-white hover:bg-sky-50 text-sky-900 border-sky-300 font-bold rounded-lg transition shadow-sm"
+              title="Return to symptom selection"
+            >
+              <ArrowLeft className="w-4 h-4 text-sky-700" />
+              <span>⬅️ Back / Clear (वापस जाएं)</span>
+            </button>
+          )}
+          <span className={`badge ${severityConfig.badgeClass}`}>
+            {severityConfig.icon} {severity === 'critical' ? 'Critical' : severity === 'severe' ? 'Severe' : 'Moderate'}
+          </span>
+        </div>
       </div>
 
       <div className="card-body space-y-4">
@@ -285,6 +299,24 @@ export default function InstantTreatmentGuide({ selectedSymptoms = [] }) {
                 </li>
               ))}
             </ul>
+          </div>
+        )}
+
+        {/* Back Button Action Bar (Retains Treatment until user presses Back) */}
+        {onBack && (
+          <div className="pt-3 border-t border-sky-200 flex flex-col sm:flex-row items-center justify-between gap-3 bg-sky-50/80 p-4 rounded-xl border border-sky-200">
+            <div className="text-xs text-sky-950 font-medium">
+              <div className="font-bold">Treatment advice remains on screen until you press the Back button.</div>
+              <div className="text-3xs text-sky-700">जब तक आप 'वापस जाएं' बटन नहीं दबाते, उपचार निर्देश यहीं रहेंगे।</div>
+            </div>
+            <button
+              type="button"
+              onClick={onBack}
+              className="w-full sm:w-auto btn-primary bg-sky-700 hover:bg-sky-800 text-white font-bold px-6 py-2.5 text-xs flex items-center justify-center gap-2 shadow"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>⬅️ Press Back to Clear / Enter New Symptoms</span>
+            </button>
           </div>
         )}
       </div>

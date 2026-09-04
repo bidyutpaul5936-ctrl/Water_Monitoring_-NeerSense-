@@ -134,6 +134,44 @@ export default function HygieneClassificationDesk() {
         </div>
       </div>
 
+      {/* 4-Stage Workflow Stepper */}
+      <div className="p-3 bg-sky-50/80 border border-sky-200 rounded-xl space-y-2">
+        <div className="text-3xs font-bold text-sky-900 uppercase tracking-wider">Official 4-Stage Report Publishing Pipeline:</div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-3xs font-semibold">
+          <div className="p-2 rounded-lg bg-emerald-50 border border-emerald-300 text-emerald-950 flex items-center gap-1.5">
+            <span className="w-4 h-4 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-3xs shrink-0">✓</span>
+            <div>
+              <div className="font-bold leading-tight">ASHA Field Entry</div>
+              <div className="text-emerald-700 text-4xs">Completed</div>
+            </div>
+          </div>
+
+          <div className="p-2 rounded-lg bg-teal-600 text-white flex items-center gap-1.5 shadow-sm">
+            <span className="w-4 h-4 rounded-full bg-white text-teal-900 flex items-center justify-center font-bold text-3xs shrink-0">2</span>
+            <div>
+              <div className="font-bold leading-tight">Health / Hygiene Dept</div>
+              <div className="text-teal-100 text-4xs">Active Classification Desk</div>
+            </div>
+          </div>
+
+          <div className="p-2 rounded-lg bg-white border border-sky-200 text-sky-900 flex items-center gap-1.5">
+            <span className="w-4 h-4 rounded-full bg-sky-100 text-sky-700 flex items-center justify-center font-bold text-3xs shrink-0">3</span>
+            <div>
+              <div className="font-bold leading-tight">Government Admin</div>
+              <div className="text-slate-500 text-4xs">Verification & Approval</div>
+            </div>
+          </div>
+
+          <div className="p-2 rounded-lg bg-white border border-sky-200 text-sky-900 flex items-center gap-1.5">
+            <span className="w-4 h-4 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-3xs shrink-0">4</span>
+            <div>
+              <div className="font-bold leading-tight">Citizens Portal</div>
+              <div className="text-slate-500 text-4xs">Published Report</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Success Notification */}
       {successMessage && (
         <div className="p-4 bg-emerald-50 border-2 border-emerald-400 rounded-xl text-emerald-950 text-xs flex items-center gap-3 shadow-sm animate-pulse">

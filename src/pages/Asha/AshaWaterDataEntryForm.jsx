@@ -114,7 +114,45 @@ export default function AshaWaterDataEntryForm({ onReportSubmitted }) {
 
         <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-50 border border-amber-200 rounded-full text-2xs text-amber-800 font-medium">
           <Clock className="w-3 h-3 text-amber-600" />
-          <span>Requires Government Approval before publishing to Villagers</span>
+          <span>Stage 1 of 4: ASHA Field Data Entry</span>
+        </div>
+      </div>
+
+      {/* 4-Stage Workflow Stepper */}
+      <div className="p-3 bg-sky-50/80 border border-sky-200 rounded-xl space-y-2">
+        <div className="text-3xs font-bold text-sky-900 uppercase tracking-wider">Official 4-Stage Report Publishing Pipeline:</div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-3xs font-semibold">
+          <div className="p-2 rounded-lg bg-sky-600 text-white flex items-center gap-1.5 shadow-sm">
+            <span className="w-4 h-4 rounded-full bg-white text-sky-900 flex items-center justify-center font-bold text-3xs shrink-0">1</span>
+            <div>
+              <div className="font-bold leading-tight">ASHA Field Entry</div>
+              <div className="text-sky-100 text-4xs">Active Stage</div>
+            </div>
+          </div>
+
+          <div className="p-2 rounded-lg bg-white border border-sky-200 text-sky-900 flex items-center gap-1.5">
+            <span className="w-4 h-4 rounded-full bg-sky-100 text-sky-700 flex items-center justify-center font-bold text-3xs shrink-0">2</span>
+            <div>
+              <div className="font-bold leading-tight">Health / Hygiene Dept</div>
+              <div className="text-slate-500 text-4xs">Safety Classification</div>
+            </div>
+          </div>
+
+          <div className="p-2 rounded-lg bg-white border border-sky-200 text-sky-900 flex items-center gap-1.5">
+            <span className="w-4 h-4 rounded-full bg-sky-100 text-sky-700 flex items-center justify-center font-bold text-3xs shrink-0">3</span>
+            <div>
+              <div className="font-bold leading-tight">Government Admin</div>
+              <div className="text-slate-500 text-4xs">Verification & Approval</div>
+            </div>
+          </div>
+
+          <div className="p-2 rounded-lg bg-white border border-sky-200 text-sky-900 flex items-center gap-1.5">
+            <span className="w-4 h-4 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-3xs shrink-0">4</span>
+            <div>
+              <div className="font-bold leading-tight">Citizens Portal</div>
+              <div className="text-slate-500 text-4xs">Published Report</div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -229,18 +267,6 @@ export default function AshaWaterDataEntryForm({ onReportSubmitted }) {
               value={bacterialCfu}
               onChange={(e) => setBacterialCfu(e.target.value)}
               placeholder="e.g. 0"
-              className="w-full text-xs p-2 rounded border border-sky-300 bg-white font-mono"
-            />
-          </div>
-
-          <div>
-            <label className="block text-2xs font-bold text-sky-950 mb-0.5">
-              Bacterial CFU/100ml
-            </label>
-            <input
-              type="number"
-              value={bacterialCfu}
-              onChange={(e) => setBacterialCfu(e.target.value)}
               className="w-full text-xs p-2 rounded border border-sky-300 bg-white font-mono"
             />
           </div>

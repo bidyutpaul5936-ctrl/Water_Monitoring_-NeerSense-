@@ -201,7 +201,10 @@ export default function VillagersPage() {
           <HealthConditionForm onSymptomsChange={setSelectedSymptoms} />
 
           {/* Instant basic treatment instructions according to selected symptoms */}
-          <InstantTreatmentGuide selectedSymptoms={selectedSymptoms} />
+          <InstantTreatmentGuide 
+            selectedSymptoms={selectedSymptoms} 
+            onBack={() => setSelectedSymptoms([])}
+          />
         </div>
       )}
 
