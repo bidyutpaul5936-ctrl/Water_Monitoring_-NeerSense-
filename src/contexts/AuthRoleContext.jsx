@@ -1,13 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  signOut,
-  onAuthStateChanged,
-  updateProfile,
-} from 'firebase/auth';
-import { auth } from '../firebase';
-import { firestoreService } from '../services/firestoreService';
+import React, { createContext, useContext, useState } from 'react';
 
 const AuthRoleContext = createContext();
 
@@ -29,168 +20,86 @@ const ROLE_DEFAULTS = {
   admin: { title: 'System Administrator', avatar: '⚙️' },
 };
 
-export const AuthRoleProvider = ({ children }) => {
-  const [firebaseUser, setFirebaseUser] = useState(null);   // Firebase Auth user
-  const [userProfile, setUserProfile] = useState(null);     // Firestore profile
-  const [activeRole, setActiveRoleState] = useState(ROLES.VILLAGER);
-  const [authLoading, setAuthLoading] = useState(true);     // true until onAuthStateChanged resolves
-  const [authError, setAuthError] = useState(null);
+// The PINs used to switch into restricted roles
+const ROLE_PINS = {
+  official: '1234',
+  admin: '1234',
+  asha: '5678',
+  hygiene: '4321',
+};
 
-  // ─── Listen for Firebase Auth state ───────────────────────────────────────
-  useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (fbUser) => {
-      if (fbUser) {
-        setFirebaseUser(fbUser);
-        try {
-          const profile = await firestoreService.getUserProfile(fbUser.uid);
-          if (profile) {
-            setUserProfile(profile);
-            setActiveRoleState(profile.role || ROLES.VILLAGER);
-          }
-        } catch (err) {
-          console.error('Failed to load user profile:', err);
-        }
-      } else {
-        setFirebaseUser(null);
-        setUserProfile(null);
-        setActiveRoleState(ROLES.VILLAGER);
-      }
-      setAuthLoading(false);
-    });
-    return () => unsub();
-  }, []);
+export const AuthRoleProvider = ({ children }) => {
+  const [activeRole, setActiveRoleState] = useState(ROLES.VILLAGER);
 
   // ─── Derived role flags ────────────────────────────────────────────────────
   const isGovernment = activeRole === ROLES.OFFICIAL || activeRole === ROLES.ADMIN;
   const isAsha = activeRole === ROLES.ASHA || isGovernment;
   const isHygiene = activeRole === ROLES.HYGIENE || isGovernment;
   const isVillager = activeRole === ROLES.VILLAGER;
-  const isAuthenticated = !!firebaseUser;
 
-  // Build currentUser from Firestore profile + ROLE_DEFAULTS
-  const currentUser = userProfile
-    ? {
-        ...ROLE_DEFAULTS[userProfile.role] || ROLE_DEFAULTS.villager,
-        ...userProfile,
-      }
-    : { role: ROLES.VILLAGER, ...ROLE_DEFAULTS.villager };
+  const currentUser = {
+    role: activeRole,
+    ...ROLE_DEFAULTS[activeRole] || ROLE_DEFAULTS.villager,
+  };
 
-  // ─── Auth Actions ──────────────────────────────────────────────────────────
-
-  /**
-   * Register a new user with email/password and create a Firestore profile.
-   * @param {string} email
-   * @param {string} password
-   * @param {string} role - One of ROLES values
-   * @param {object} extraData - name, villageId, villageName, phone, etc.
-   */
-  const registerWithEmail = async (email, password, role, extraData = {}) => {
-    setAuthError(null);
-    try {
-      const cred = await createUserWithEmailAndPassword(auth, email, password);
-      const { uid } = cred.user;
-
-      // Set Firebase display name
-      if (extraData.name) {
-        await updateProfile(cred.user, { displayName: extraData.name });
-      }
-
-      // Create Firestore user profile
-      const profile = {
-        uid,
-        email,
-        role: role || ROLES.VILLAGER,
-        name: extraData.name || '',
-        villageId: extraData.villageId || '',
-        villageName: extraData.villageName || '',
-        district: extraData.district || '',
-        phone: extraData.phone || '',
-        ashaId: extraData.ashaId || '',
-        department: extraData.department || '',
-        ...ROLE_DEFAULTS[role] || ROLE_DEFAULTS.villager,
-      };
-
-      await firestoreService.createUserProfile(uid, profile);
-      setUserProfile(profile);
-      setActiveRoleState(role || ROLES.VILLAGER);
-      return { success: true };
-    } catch (err) {
-      const msg = getFriendlyAuthError(err.code);
-      setAuthError(msg);
-      return { success: false, message: msg };
+  // ─── Role Switching ────────────────────────────────────────────────────────
+  const setRole = (role) => {
+    if (ROLES[role.toUpperCase()] || Object.values(ROLES).includes(role)) {
+      setActiveRoleState(role);
     }
   };
 
-  /**
-   * Sign in with email/password.
-   */
-  const loginWithEmail = async (email, password) => {
-    setAuthError(null);
-    try {
-      await signInWithEmailAndPassword(auth, email, password);
-      // onAuthStateChanged will handle loading the profile
+  const loginAsGovernment = (pin) => {
+    if (pin === ROLE_PINS.official || pin === ROLE_PINS.admin || pin === '1234') {
+      setActiveRoleState(ROLES.OFFICIAL);
       return { success: true };
-    } catch (err) {
-      const msg = getFriendlyAuthError(err.code);
-      setAuthError(msg);
-      return { success: false, message: msg };
     }
+    return { success: false, message: 'Incorrect PIN. Demo PIN is 1234' };
   };
 
-  /**
-   * Sign out.
-   */
-  const logout = async () => {
-    await signOut(auth);
-    setUserProfile(null);
+  const loginAsAsha = (pin) => {
+    if (pin === ROLE_PINS.asha || pin === '1234' || pin === '5678') {
+      setActiveRoleState(ROLES.ASHA);
+      return { success: true };
+    }
+    return { success: false, message: 'Incorrect ASHA PIN. Demo PIN is 5678 or 1234' };
+  };
+
+  const loginAsHygiene = (pin) => {
+    if (pin === ROLE_PINS.hygiene || pin === '1234' || pin === '4321') {
+      setActiveRoleState(ROLES.HYGIENE);
+      return { success: true };
+    }
+    return { success: false, message: 'Incorrect Hygiene PIN. Demo PIN is 4321 or 1234' };
+  };
+
+  const logoutToVillager = () => {
     setActiveRoleState(ROLES.VILLAGER);
   };
 
-  // Keep legacy alias used in some components
-  const logoutToVillager = logout;
-
-  // ─── Error Messages ────────────────────────────────────────────────────────
-  function getFriendlyAuthError(code) {
-    const map = {
-      'auth/email-already-in-use': 'This email is already registered. Please log in.',
-      'auth/invalid-email': 'Please enter a valid email address.',
-      'auth/weak-password': 'Password must be at least 6 characters.',
-      'auth/user-not-found': 'No account found with this email.',
-      'auth/wrong-password': 'Incorrect password. Please try again.',
-      'auth/invalid-credential': 'Incorrect email or password. Please try again.',
-      'auth/too-many-requests': 'Too many attempts. Please wait and try again.',
-      'auth/network-request-failed': 'Network error. Check your internet connection.',
-    };
-    return map[code] || 'An unexpected error occurred. Please try again.';
-  }
+  const logout = logoutToVillager;
 
   return (
     <AuthRoleContext.Provider
       value={{
         // State
-        firebaseUser,
-        userProfile,
         activeRole,
         currentUser,
-        authLoading,
-        authError,
-        isAuthenticated,
+        authLoading: false,
+        isAuthenticated: true,
         // Role flags
         ROLES,
         isGovernment,
         isAsha,
         isHygiene,
         isVillager,
-        // Auth actions
-        registerWithEmail,
-        loginWithEmail,
+        // Role switching
+        setRole,
+        loginAsGovernment,
+        loginAsAsha,
+        loginAsHygiene,
         logout,
         logoutToVillager,
-        // Legacy (no-op stubs to avoid breaking existing components)
-        setRole: () => {},
-        loginAsGovernment: () => ({ success: false, message: 'Use email login' }),
-        loginAsAsha: () => ({ success: false, message: 'Use email login' }),
-        loginAsHygiene: () => ({ success: false, message: 'Use email login' }),
         allProfiles: ROLE_DEFAULTS,
       }}
     >

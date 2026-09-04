@@ -1,14 +1,12 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ShieldCheck, Lock, ArrowLeft, LogIn } from 'lucide-react';
+import React, { useState } from 'react';
+import { ShieldCheck, Lock, ArrowLeft, Unlock } from 'lucide-react';
 import { useAuthRole } from '../contexts/AuthRoleContext';
 
 /**
  * GovernmentAuthGate
  *
- * Now that Firebase Auth is in use, this gate checks whether the currently
- * signed-in user has the required role. If not, it shows a friendly "access
- * denied" panel and offers a link to sign in with the right account.
+ * PIN-based access gate for restricted portals.
+ * Users enter a PIN to switch into the required role.
  *
  * Props:
  *   title        – heading text
@@ -21,8 +19,9 @@ export default function GovernmentAuthGate({
   children,
   onAuthorized,
 }) {
-  const navigate = useNavigate();
-  const { activeRole, isAuthenticated, isGovernment, isAsha, isHygiene, ROLES } = useAuthRole();
+  const { isGovernment, isAsha, isHygiene, loginAsGovernment, loginAsAsha, loginAsHygiene } = useAuthRole();
+  const [pin, setPin] = useState('');
+  const [error, setError] = useState('');
 
   // Determine if the current user is allowed
   const isAllowed =
@@ -30,7 +29,7 @@ export default function GovernmentAuthGate({
       ? isAsha
       : requiredRole === 'HYGIENE'
       ? isHygiene
-      : isGovernment; // 'Government' or anything else
+      : isGovernment;
 
   // If allowed, render children (or call onAuthorized for the old API)
   if (isAllowed) {
@@ -38,13 +37,28 @@ export default function GovernmentAuthGate({
     return children ?? null;
   }
 
-  // Not allowed — show access denied panel
   const roleLabel =
     requiredRole === 'ASHA'
       ? 'ASHA / ANM Field Worker'
       : requiredRole === 'HYGIENE'
       ? 'Water & Sanitation Officer'
       : 'District Health Official / Admin';
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    setError('');
+    let result;
+    if (requiredRole === 'ASHA') {
+      result = loginAsAsha(pin);
+    } else if (requiredRole === 'HYGIENE') {
+      result = loginAsHygiene(pin);
+    } else {
+      result = loginAsGovernment(pin);
+    }
+    if (!result.success) {
+      setError(result.message || 'Incorrect PIN. Please try again.');
+    }
+  };
 
   return (
     <div className="max-w-md mx-auto my-12 p-6 bg-white rounded-2xl border-2 border-sky-300 shadow-xl text-center space-y-5">
@@ -66,30 +80,47 @@ export default function GovernmentAuthGate({
             : 'This section is restricted to District Health Administration & Jal Shakti Officials.'}
         </p>
         <p className="text-xs text-slate-500 mt-2">
-          Required role: <strong className="text-sky-800">{roleLabel}</strong><br />
-          Your current role: <strong className="text-slate-700">{activeRole}</strong>
+          Required role: <strong className="text-sky-800">{roleLabel}</strong>
         </p>
       </div>
 
-      <div className="space-y-2">
+      <form onSubmit={handleSubmit} className="space-y-3">
+        <input
+          type="password"
+          value={pin}
+          onChange={(e) => setPin(e.target.value)}
+          placeholder={`Enter Access PIN (${requiredRole === 'ASHA' ? '5678' : requiredRole === 'HYGIENE' ? '4321' : '1234'})`}
+          className="w-full px-4 py-2.5 border-2 border-sky-200 rounded-lg text-center text-sm font-mono tracking-widest focus:outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-200 transition"
+          autoFocus
+        />
+        {error && (
+          <p className="text-xs text-red-600 font-semibold">{error}</p>
+        )}
         <button
-          type="button"
-          onClick={() => navigate('/auth')}
+          type="submit"
           className="w-full py-2.5 px-4 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-lg transition shadow flex items-center justify-center gap-2 text-xs"
         >
-          <LogIn className="w-4 h-4" />
-          <span>Sign in with the correct account</span>
+          <Unlock className="w-4 h-4" />
+          <span>Verify & Access Portal</span>
         </button>
 
-        <button
-          type="button"
-          onClick={() => navigate('/villagers')}
-          className="mt-2 text-xs text-sky-700 hover:text-sky-950 font-medium transition flex items-center justify-center gap-1 w-full"
-        >
-          <ArrowLeft className="w-3 h-3" />
-          <span>Return to Public Villagers Portal</span>
-        </button>
-      </div>
+        {/* Quick Demo Access Button */}
+        <div className="pt-2">
+          <button
+            type="button"
+            onClick={() => {
+              const defaultPin = requiredRole === 'ASHA' ? '5678' : requiredRole === 'HYGIENE' ? '4321' : '1234';
+              setPin(defaultPin);
+              if (requiredRole === 'ASHA') loginAsAsha(defaultPin);
+              else if (requiredRole === 'HYGIENE') loginAsHygiene(defaultPin);
+              else loginAsGovernment(defaultPin);
+            }}
+            className="w-full py-2 px-3 bg-sky-50 hover:bg-sky-100 text-sky-800 border border-sky-200 font-semibold rounded-lg text-xs transition"
+          >
+            ⚡ Quick Demo Access (PIN: {requiredRole === 'ASHA' ? '5678' : requiredRole === 'HYGIENE' ? '4321' : '1234'})
+          </button>
+        </div>
+      </form>
     </div>
   );
 }

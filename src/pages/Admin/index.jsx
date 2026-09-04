@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Building2, ShieldCheck, CheckCircle2, FileCheck, Eye, SlidersHorizontal, Activity, Database } from 'lucide-react';
+import { Building2, ShieldCheck, CheckCircle2, FileCheck, Activity, Database } from 'lucide-react';
 import { useAuthRole } from '../../contexts/AuthRoleContext';
 import { useAlertNotification } from '../../contexts/AlertNotificationContext';
 import { api } from '../../services/api';
@@ -11,25 +11,15 @@ import CommunitySurveillanceFeed from './CommunitySurveillanceFeed';
 import SystemControlToolbar from './SystemControlToolbar';
 import WaterQualityInputForm from './WaterQualityInputForm';
 
-export default function AdminPage() {
-  const { isGovernment, currentUser } = useAuthRole();
-  const { waterReports, symptoms, refreshData } = useAlertNotification();
+function AdminDashboardContent() {
+  const { waterReports = [], symptoms = [], refreshData = () => {} } = useAlertNotification() || {};
   const [adminTab, setAdminTab] = useState('verification'); // 'verification', 'surveillance', 'directLab', 'controls'
   const [toastMessage, setToastMessage] = useState(null);
 
-  // Strictly enforce Government official access
-  if (!isGovernment) {
-    return (
-      <div className="max-w-screen-xl mx-auto px-4 py-8">
-        <GovernmentAuthGate 
-          title="Government Administration Portal Access"
-          requiredRole="Government"
-        />
-      </div>
-    );
-  }
+  const safeWaterReports = Array.isArray(waterReports) ? waterReports : [];
+  const safeSymptoms = Array.isArray(symptoms) ? symptoms : [];
 
-  const pendingReportsCount = waterReports.filter(r => r.status === 'PENDING_APPROVAL' || (!r.isApproved && r.status !== 'REJECTED')).length;
+  const pendingReportsCount = safeWaterReports.filter(r => r && (r.status === 'PENDING_APPROVAL' || (!r.isApproved && r.status !== 'REJECTED'))).length;
 
   const handleClearAll = async () => {
     if (confirm('Reset entire system to empty state? All water reports, symptoms, and alerts will be cleared.')) {
@@ -46,14 +36,14 @@ export default function AdminPage() {
 
   const [seeding, setSeeding] = useState(false);
   const handleSeedData = async () => {
-    if (!confirm('Seed Firestore with all 7 NeerSense demo villages? This is safe to run multiple times (idempotent).')) return;
+    if (!confirm('Load sample demo village data into system? This is safe to run multiple times.')) return;
     setSeeding(true);
     try {
       const result = await seedNeerSenseData();
       refreshData();
-      setToastMessage({ type: 'success', text: `✅ Seeded ${result.villages} villages into Firestore.${result.errors.length ? ' Some errors: ' + result.errors.join('; ') : ''}` });
+      setToastMessage({ type: 'success', text: `✅ Loaded sample data for ${result.villages} villages.` });
     } catch (err) {
-      setToastMessage({ type: 'error', text: `Seed failed: ${err.message}` });
+      setToastMessage({ type: 'error', text: `Load failed: ${err.message}` });
     } finally {
       setSeeding(false);
       setTimeout(() => setToastMessage(null), 6000);
@@ -80,19 +70,18 @@ export default function AdminPage() {
             </p>
           </div>
 
-          <SystemControlToolbar
-            onClearAll={handleClearAll}
-          />
-          <button
-            id="seed-firestore-btn"
-            onClick={handleSeedData}
-            disabled={seeding}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-300 rounded-lg hover:bg-emerald-100 transition disabled:opacity-60"
-            title="Seed Firestore with NeerSense demo village data"
-          >
-            <Database className="w-3.5 h-3.5" />
-            {seeding ? 'Seeding…' : '🌱 Seed Firestore Data'}
-          </button>
+          <div className="flex items-center gap-2">
+            <SystemControlToolbar onClearAll={handleClearAll} />
+            <button
+              onClick={handleSeedData}
+              disabled={seeding}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-300 rounded-lg hover:bg-emerald-100 transition disabled:opacity-60 cursor-pointer"
+              title="Load sample demo village data"
+            >
+              <Database className="w-3.5 h-3.5" />
+              {seeding ? 'Loading…' : '🌱 Load Sample Data'}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -127,7 +116,7 @@ export default function AdminPage() {
           }`}
         >
           <Activity className="w-3.5 h-3.5" />
-          <span>📊 Community Health Cases ({symptoms.length})</span>
+          <span>📊 Community Health Cases ({safeSymptoms.length})</span>
         </button>
 
         <button
@@ -145,14 +134,8 @@ export default function AdminPage() {
 
       {/* Tab Contents */}
       <div>
-        {adminTab === 'verification' && (
-          <GovtReportVerificationDesk />
-        )}
-
-        {adminTab === 'surveillance' && (
-          <CommunitySurveillanceFeed />
-        )}
-
+        {adminTab === 'verification' && <GovtReportVerificationDesk />}
+        {adminTab === 'surveillance' && <CommunitySurveillanceFeed />}
         {adminTab === 'directLab' && (
           <WaterQualityInputForm 
             onSuccess={() => {
@@ -162,6 +145,19 @@ export default function AdminPage() {
           />
         )}
       </div>
+    </div>
+  );
+}
+
+export default function AdminPage() {
+  return (
+    <div className="max-w-screen-xl mx-auto px-4 py-6">
+      <GovernmentAuthGate 
+        title="Government Administration Portal Access" 
+        requiredRole="Government"
+      >
+        <AdminDashboardContent />
+      </GovernmentAuthGate>
     </div>
   );
 }

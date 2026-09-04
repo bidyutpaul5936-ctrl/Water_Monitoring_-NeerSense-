@@ -103,15 +103,19 @@ export default function RoleLoginSelector() {
     
     if (targetRole === ROLES.VILLAGER) {
       logoutToVillager();
+      navigate('/villagers');
       return;
     }
 
-    // If already logged into this role, no PIN prompt needed
+    // If already logged into this role, navigate to its portal
     if (activeRole === targetRole) {
+      const matched = roleDefinitions.find(r => r.role === targetRole);
+      if (matched) navigate(matched.portalPath);
       return;
     }
 
-    setPinInput('1234'); // convenient pre-fill demo PIN
+    const defaultPin = targetRole === ROLES.ASHA ? '5678' : targetRole === ROLES.HYGIENE ? '4321' : '1234';
+    setPinInput(defaultPin);
     setShowPinModal(true);
   };
 
@@ -293,15 +297,15 @@ export default function RoleLoginSelector() {
                   type="password"
                   value={pinInput}
                   onChange={(e) => setPinInput(e.target.value)}
-                  placeholder="Enter PIN (Demo: 1234)"
+                  placeholder={`Enter PIN (Demo: ${selectedRoleKey === ROLES.ASHA ? '5678' : selectedRoleKey === ROLES.HYGIENE ? '4321' : '1234'})`}
                   className="form-input text-center text-base tracking-widest font-mono"
                   autoFocus
                 />
                 <div className="text-3xs text-sky-700 mt-1 flex items-center justify-between">
-                  <span>Demo PIN: <strong>1234</strong></span>
+                  <span>Demo PIN: <strong>{selectedRoleKey === ROLES.ASHA ? '5678' : selectedRoleKey === ROLES.HYGIENE ? '4321' : '1234'}</strong></span>
                   <button
                     type="button"
-                    onClick={() => setPinInput('1234')}
+                    onClick={() => setPinInput(selectedRoleKey === ROLES.ASHA ? '5678' : selectedRoleKey === ROLES.HYGIENE ? '4321' : '1234')}
                     className="underline text-sky-600 hover:text-sky-800"
                   >
                     Quick Autofill

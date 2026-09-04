@@ -1,16 +1,13 @@
 import React, { useState } from 'react';
-import { BookOpen, Volume2, VolumeX, FlaskConical, ShieldCheck, HeartPulse } from 'lucide-react';
+import { BookOpen, Volume2, VolumeX, FlaskConical } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { useAuthRole } from '../../contexts/AuthRoleContext';
 import { speechService } from '../../services/speechService';
 import GovernmentAuthGate from '../../components/GovernmentAuthGate';
 import HygieneClassificationDesk from './HygieneClassificationDesk';
-
 import WaterBorneDiseaseTable from './WaterBorneDiseaseTable';
 
-export default function HygienePage() {
+function HygieneDashboardContent() {
   const { lang } = useLanguage();
-  const { isHygiene, isGovernment } = useAuthRole();
   const [playingAudioKey, setPlayingAudioKey] = useState(null);
   const [activeTab, setActiveTab] = useState('desk'); // 'desk', 'diseases'
 
@@ -27,20 +24,8 @@ export default function HygienePage() {
     }
   };
 
-  // Auth gate check - requires Hygiene Department or Government superuser
-  if (!isHygiene && !isGovernment) {
-    return (
-      <div className="max-w-screen-xl mx-auto px-4 py-8">
-        <GovernmentAuthGate 
-          requiredRole="HYGIENE" 
-          title="District Hygiene & Sanitation Department Portal" 
-        />
-      </div>
-    );
-  }
-
   return (
-    <div className="max-w-screen-xl mx-auto px-4 py-6 space-y-6">
+    <div className="space-y-6">
       {/* Header Banner */}
       <div className="card bg-gradient-to-r from-sky-100 via-sky-50 to-white border-sky-300 p-5">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -82,7 +67,6 @@ export default function HygienePage() {
             <span>Water Safety Classification Desk</span>
           </button>
 
-
           <button
             onClick={() => setActiveTab('diseases')}
             className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
@@ -98,16 +82,21 @@ export default function HygienePage() {
       </div>
 
       {/* Tab Content */}
-      {activeTab === 'desk' && (
-        <HygieneClassificationDesk />
-      )}
-
-
-
-      {activeTab === 'diseases' && (
-        <WaterBorneDiseaseTable />
-      )}
+      {activeTab === 'desk' && <HygieneClassificationDesk />}
+      {activeTab === 'diseases' && <WaterBorneDiseaseTable />}
     </div>
   );
 }
 
+export default function HygienePage() {
+  return (
+    <div className="max-w-screen-xl mx-auto px-4 py-6">
+      <GovernmentAuthGate 
+        requiredRole="HYGIENE" 
+        title="District Hygiene & Sanitation Department Portal"
+      >
+        <HygieneDashboardContent />
+      </GovernmentAuthGate>
+    </div>
+  );
+}

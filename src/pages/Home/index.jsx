@@ -48,21 +48,12 @@ export default function HomePage() {
             >
               Call 104 Helpline
             </a>
-            {isGovernment || activeRole === ROLES.HYGIENE ? (
-              <Link
-                to="/hygiene"
-                className="btn-secondary text-xs px-3.5 py-2"
-              >
-                Hygiene Desk
-              </Link>
-            ) : (
-              <Link
-                to="/villagers"
-                className="btn-secondary text-xs px-3.5 py-2"
-              >
-                Villagers Portal
-              </Link>
-            )}
+            <Link
+              to={isGovernment ? '/admin' : activeRole === ROLES.ASHA ? '/asha' : activeRole === ROLES.HYGIENE ? '/hygiene' : '/villagers'}
+              className="btn-secondary text-xs px-3.5 py-2"
+            >
+              {isGovernment ? 'Government Portal' : activeRole === ROLES.ASHA ? 'ASHA Portal' : activeRole === ROLES.HYGIENE ? 'Hygiene Desk' : 'Villagers Portal'}
+            </Link>
           </div>
         </div>
       </div>

@@ -28,8 +28,8 @@ import USSDSimulatorModal from './USSDSimulatorModal';
 export default function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { activeRole, currentUser, isGovernment, isAsha, isHygiene, isVillager, logout, firebaseUser } = useAuthRole();
-  const handleLogout = async () => { await (logout || (() => {}))(); navigate('/auth'); };
+  const { activeRole, currentUser, isGovernment, isAsha, isHygiene, isVillager, logout, setRole } = useAuthRole();
+  const handleLogout = () => { logout(); navigate('/'); };
   const { lang, setLang, languages } = useLanguage();
   const { isOnline, totalPending, isSyncing, syncNow } = useOfflineSync();
   const { waterReports } = useAlertNotification();
@@ -41,13 +41,15 @@ export default function Navbar() {
   const approvedReports = waterReports.filter(r => r.status === 'APPROVED' || r.isApproved === true);
   const contaminatedCount = approvedReports.filter(r => r.safetyStatus === 'CONTAMINATED').length;
 
-  const navItems = [
-    { path: '/',           label: 'Home',                  icon: Home,      isAllowed: true },
-    { path: '/villagers',  label: 'Villagers Portal',       icon: Users,     isAllowed: location.pathname !== '/' && (isVillager || isGovernment) },
-    { path: '/asha',       label: 'ASHA Workers',           icon: Activity,  isAllowed: (activeRole === ROLES.ASHA) || isGovernment },
-    { path: '/hygiene',    label: 'Hygiene & Water Safety', icon: BookOpen,  isAllowed: (activeRole === ROLES.HYGIENE) || isGovernment },
-    { path: '/admin',      label: 'Government Admin',       icon: Building2, isAllowed: isGovernment },
-  ].filter(item => item.isAllowed);
+  const allNavItems = [
+    { path: '/',           label: 'Home',                  icon: Home,      show: true },
+    { path: '/villagers',  label: 'Villagers Portal',       icon: Users,     show: isVillager || isGovernment },
+    { path: '/asha',       label: 'ASHA Workers',           icon: Activity,  show: activeRole === ROLES.ASHA || isGovernment },
+    { path: '/hygiene',    label: 'Hygiene & Water Safety', icon: BookOpen,  show: activeRole === ROLES.HYGIENE || isGovernment },
+    { path: '/admin',      label: 'Government Admin',       icon: Building2, show: isGovernment },
+  ];
+
+  const navItems = allNavItems.filter(item => item.show);
 
   return (
     <>
@@ -70,9 +72,9 @@ export default function Navbar() {
               <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-sky-800 text-sky-100 border border-sky-700 text-xs">
                 <span>{currentUser.avatar}</span>
                 <span className="font-semibold text-2xs sm:text-xs">
-                  {currentUser.name || firebaseUser?.email || currentUser.title || 'Authorized Staff'}
+                  {currentUser.name || currentUser.title || 'Authorized Staff'}
                 </span>
-                {(currentUser.name || firebaseUser?.email) && currentUser.title && (
+                {currentUser.name && currentUser.title && (
                   <span className="text-3xs text-sky-300">({currentUser.department || currentUser.title})</span>
                 )}
               </span>

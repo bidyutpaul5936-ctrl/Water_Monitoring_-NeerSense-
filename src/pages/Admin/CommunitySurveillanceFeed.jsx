@@ -3,7 +3,8 @@ import { Users, Info } from 'lucide-react';
 import { useAlertNotification } from '../../contexts/AlertNotificationContext';
 
 export default function CommunitySurveillanceFeed() {
-  const { symptoms } = useAlertNotification();
+  const { symptoms = [] } = useAlertNotification() || {};
+  const safeSymptoms = Array.isArray(symptoms) ? symptoms : [];
 
   return (
     <div className="card">
@@ -15,11 +16,11 @@ export default function CommunitySurveillanceFeed() {
             <p className="text-2xs text-sky-700">Real-time health reports entered by villagers across all rural health sub-centers</p>
           </div>
         </div>
-        <span className="badge badge-blue">{symptoms.length} Total Report(s)</span>
+        <span className="badge badge-blue">{safeSymptoms.length} Total Report(s)</span>
       </div>
 
       <div className="card-body">
-        {symptoms.length === 0 ? (
+        {safeSymptoms.length === 0 ? (
           <div className="p-8 text-center rounded-xl bg-sky-50/70 border border-sky-200 space-y-2">
             <Info className="w-8 h-8 text-sky-600 mx-auto" />
             <div className="text-sm font-bold text-sky-950">No Villager Health Reports Submitted Yet</div>
@@ -42,7 +43,7 @@ export default function CommunitySurveillanceFeed() {
                 </tr>
               </thead>
               <tbody>
-                {symptoms.map(s => (
+                {safeSymptoms.map(s => (
                   <tr key={s.id}>
                     <td className="font-bold text-sky-950 text-xs">{s.patientName}</td>
                     <td className="text-xs text-slate-700">{s.villageName || s.villageId}</td>

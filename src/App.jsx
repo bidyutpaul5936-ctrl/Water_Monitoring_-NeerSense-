@@ -14,51 +14,10 @@ import VillagersPage from './pages/Villagers';
 import AshaPage from './pages/Asha';
 import HygienePage from './pages/Hygiene';
 import AdminPage from './pages/Admin';
-import LoginPage from './pages/Auth/LoginPage';
-
-// ─── Auth Guard ────────────────────────────────────────────────────────────
-// Shows a full-screen loader while Firebase resolves the auth state,
-// then redirects unauthenticated users to /auth.
-function AuthGuard({ children }) {
-  const { isAuthenticated, authLoading } = useAuthRole();
-
-  if (authLoading) {
-    return (
-      <div style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: '#020b18',
-        flexDirection: 'column',
-        gap: '1rem',
-      }}>
-        <div style={{
-          width: 48, height: 48,
-          border: '3px solid rgba(14,165,233,0.2)',
-          borderTop: '3px solid #0ea5e9',
-          borderRadius: '50%',
-          animation: 'spin 0.8s linear infinite',
-        }} />
-        <p style={{ color: '#64748b', fontSize: '0.9rem', fontFamily: 'system-ui' }}>
-          Loading NeerSense…
-        </p>
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return <Navigate to="/auth" replace />;
-  }
-
-  return children;
-}
 
 function MainLayout() {
   // Note: React Router v6 requires <Route> elements to be DIRECT children
-  // of <Routes>. They cannot be wrapped in custom components or fragments.
-  const { activeRole, ROLES } = useAuthRole();
+  const { activeRole, isGovernment, ROLES } = useAuthRole();
 
   return (
     <div className="min-h-screen bg-sky-50 text-slate-800 flex flex-col font-sans">
@@ -70,55 +29,63 @@ function MainLayout() {
           <Route path="/" element={<HomePage />} />
 
           {/* ─── VILLAGERS PORTAL — /villagers ───────────── */}
-          <Route
-            path="/villagers"
+          <Route 
+            path="/villagers" 
             element={
-              activeRole === ROLES.ASHA ? (
+              isGovernment || activeRole === ROLES.VILLAGER ? (
+                <VillagersPage />
+              ) : activeRole === ROLES.ASHA ? (
                 <Navigate to="/asha" replace />
               ) : activeRole === ROLES.HYGIENE ? (
                 <Navigate to="/hygiene" replace />
               ) : (
-                <VillagersPage />
+                <Navigate to="/" replace />
               )
-            }
+            } 
           />
 
           {/* ─── ASHA WORKERS PORTAL — /asha ─────────────── */}
-          <Route
-            path="/asha"
+          <Route 
+            path="/asha" 
             element={
-              activeRole === ROLES.HYGIENE ? (
+              isGovernment || activeRole === ROLES.ASHA ? (
+                <AshaPage />
+              ) : activeRole === ROLES.HYGIENE ? (
                 <Navigate to="/hygiene" replace />
               ) : (
-                <AshaPage />
+                <Navigate to="/villagers" replace />
               )
-            }
+            } 
           />
 
           {/* ─── HYGIENE DEPT PORTAL — /hygiene ──────────── */}
-          <Route
-            path="/hygiene"
+          <Route 
+            path="/hygiene" 
             element={
-              activeRole === ROLES.ASHA ? (
+              isGovernment || activeRole === ROLES.HYGIENE ? (
+                <HygienePage />
+              ) : activeRole === ROLES.ASHA ? (
                 <Navigate to="/asha" replace />
               ) : (
-                <HygienePage />
+                <Navigate to="/villagers" replace />
               )
-            }
+            } 
           />
 
           {/* ─── GOVERNMENT ADMIN PORTAL — /admin ────────── */}
-          <Route
-            path="/admin"
+          <Route 
+            path="/admin" 
             element={
-              activeRole === ROLES.ASHA ? (
+              isGovernment ? (
+                <AdminPage />
+              ) : activeRole === ROLES.ASHA ? (
                 <Navigate to="/asha" replace />
               ) : activeRole === ROLES.HYGIENE ? (
                 <Navigate to="/hygiene" replace />
               ) : (
-                <AdminPage />
+                <Navigate to="/villagers" replace />
               )
-            }
+            } 
           />
 
           {/* ─── FALLBACK — all unmatched URLs → Home ─────── */}
@@ -151,18 +118,7 @@ export default function App() {
           <OfflineSyncProvider>
             <AlertNotificationProvider>
               <Routes>
-                {/* Public auth route — no guard */}
-                <Route path="/auth" element={<LoginPage />} />
-
-                {/* All other routes require authentication */}
-                <Route
-                  path="/*"
-                  element={
-                    <AuthGuard>
-                      <MainLayout />
-                    </AuthGuard>
-                  }
-                />
+                <Route path="/*" element={<MainLayout />} />
               </Routes>
             </AlertNotificationProvider>
           </OfflineSyncProvider>

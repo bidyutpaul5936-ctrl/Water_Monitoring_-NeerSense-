@@ -9,27 +9,18 @@ import AshaSubmittedReportsList from './AshaSubmittedReportsList';
 import PatientCasesFeed from './PatientCasesFeed';
 import H2SFieldTestLogger from './H2SFieldTestLogger';
 
-export default function AshaPage() {
-  const { isAsha, isGovernment, currentUser } = useAuthRole();
-  const { symptoms, waterReports } = useAlertNotification();
+function AshaDashboardContent() {
+  const { isGovernment, currentUser = {} } = useAuthRole() || {};
+  const { symptoms = [], waterReports = [] } = useAlertNotification() || {};
   const [activeTab, setActiveTab] = useState('dataEntry'); // 'dataEntry', 'myReports', 'cases', 'h2sGuide'
 
-  // Restrict access if not ASHA worker or Government Officer
-  if (!isAsha) {
-    return (
-      <div className="max-w-screen-xl mx-auto px-4 py-8">
-        <GovernmentAuthGate 
-          title="ASHA & Field Healthcare Portal Access" 
-          requiredRole="ASHA" 
-        />
-      </div>
-    );
-  }
+  const safeWaterReports = Array.isArray(waterReports) ? waterReports : [];
+  const safeSymptoms = Array.isArray(symptoms) ? symptoms : [];
 
-  const pendingReportsCount = waterReports.filter(r => r.status === 'PENDING_APPROVAL' || (!r.isApproved && r.status !== 'REJECTED')).length;
+  const pendingReportsCount = safeWaterReports.filter(r => r && (r.status === 'PENDING_APPROVAL' || (!r.isApproved && r.status !== 'REJECTED'))).length;
 
   return (
-    <div className="max-w-screen-xl mx-auto px-4 py-6 space-y-6">
+    <div className="space-y-6">
       {/* Header Banner */}
       <div className="card bg-gradient-to-r from-sky-100 via-sky-50 to-white border-sky-300 p-5">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -58,7 +49,7 @@ export default function AshaPage() {
               {pendingReportsCount} Report(s) Awaiting Govt Approval
             </span>
             <span className="badge badge-blue">
-              {symptoms.length} Patient Case(s) in Triage
+              {safeSymptoms.length} Patient Case(s) in Triage
             </span>
           </div>
         </div>
@@ -87,7 +78,7 @@ export default function AshaPage() {
           }`}
         >
           <FileText className="w-3.5 h-3.5" />
-          <span>📑 Submitted Reports Tracker ({waterReports.length})</span>
+          <span>📑 Submitted Reports Tracker ({safeWaterReports.length})</span>
         </button>
 
         <button
@@ -99,7 +90,7 @@ export default function AshaPage() {
           }`}
         >
           <Stethoscope className="w-3.5 h-3.5" />
-          <span>🤒 Villager Patient Symptoms ({symptoms.length})</span>
+          <span>🤒 Villager Patient Symptoms ({safeSymptoms.length})</span>
         </button>
 
         <button
@@ -120,19 +111,20 @@ export default function AshaPage() {
         {activeTab === 'dataEntry' && (
           <AshaWaterDataEntryForm onReportSubmitted={() => setActiveTab('myReports')} />
         )}
-
-        {activeTab === 'myReports' && (
-          <AshaSubmittedReportsList />
-        )}
-
-        {activeTab === 'cases' && (
-          <PatientCasesFeed />
-        )}
-
-        {activeTab === 'h2sGuide' && (
-          <H2SFieldTestLogger />
-        )}
+        {activeTab === 'myReports' && <AshaSubmittedReportsList />}
+        {activeTab === 'cases' && <PatientCasesFeed />}
+        {activeTab === 'h2sGuide' && <H2SFieldTestLogger />}
       </div>
+    </div>
+  );
+}
+
+export default function AshaPage() {
+  return (
+    <div className="max-w-screen-xl mx-auto px-4 py-6">
+      <GovernmentAuthGate title="ASHA & Field Healthcare Portal Access" requiredRole="ASHA">
+        <AshaDashboardContent />
+      </GovernmentAuthGate>
     </div>
   );
 }
