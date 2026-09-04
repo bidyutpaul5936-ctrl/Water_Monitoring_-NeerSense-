@@ -9,7 +9,7 @@ router.post('/ussd', (req, res) => {
 
   if (!input || input === '*999#' || input === '*999') {
     return res.json({
-      message: "JAL SURAKSHA HEALTH (Toll-Free):\n1. Report Diarrhea/Vomiting\n2. Report Fever/Jaundice\n3. Check Water Source Safety\n4. Request ASHA Visit\nReply with number (1-4):",
+      message: "NEERSENSE HEALTH (Toll-Free):\n1. Report Diarrhea/Vomiting\n2. Report Fever/Jaundice\n3. Check Water Source Safety\n4. Request ASHA Visit\nReply with number (1-4):",
       continueSession: true
     });
   }

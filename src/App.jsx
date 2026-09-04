@@ -91,7 +91,7 @@ function MainLayout() {
       <footer className="border-t border-sky-200 bg-white py-4 text-xs text-slate-600">
         <div className="max-w-screen-xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
           <div className="flex items-center gap-1.5 font-medium">
-            <strong className="text-sky-950">JalSuraksha (जल सुरक्षा)</strong>
+            <strong className="text-sky-950">NeerSense</strong>
             <span>&bull; Smart Water-Borne Disease Early Warning System</span>
           </div>
           <div className="text-2xs text-sky-800">

@@ -6,6 +6,7 @@ export const WEST_BENGAL_VILLAGES = [
     nameBn: 'গোসাবা দ্বীপ (রাঙাবেলিয়া)',
     district: 'South 24 Parganas',
     subdivision: 'Canning',
+    coordinates: [22.1652, 88.8080],
     defaultSource: 'Pond Sand Filter Unit'
   },
   {
@@ -14,6 +15,7 @@ export const WEST_BENGAL_VILLAGES = [
     nameBn: 'সাগর দ্বীপ (গঙ্গাসাগর)',
     district: 'South 24 Parganas',
     subdivision: 'Kakdwip',
+    coordinates: [21.6444, 88.0827],
     defaultSource: 'Community Deep Tube Well #2'
   },
   {
@@ -22,6 +24,7 @@ export const WEST_BENGAL_VILLAGES = [
     nameBn: 'কাকদ্বীপ (হারউড পয়েন্ট)',
     district: 'South 24 Parganas',
     subdivision: 'Kakdwip',
+    coordinates: [21.8767, 88.1887],
     defaultSource: 'Piped Water Tap Supply'
   },
   {
@@ -30,6 +33,7 @@ export const WEST_BENGAL_VILLAGES = [
     nameBn: 'বাসন্তী (সোনাখালি চর)',
     district: 'South 24 Parganas',
     subdivision: 'Canning',
+    coordinates: [22.1932, 88.7188],
     defaultSource: 'Community Handpump #1'
   },
   {
@@ -38,6 +42,7 @@ export const WEST_BENGAL_VILLAGES = [
     nameBn: 'ক্যানিং (মাতলা তীরবর্তী)',
     district: 'South 24 Parganas',
     subdivision: 'Canning',
+    coordinates: [22.3111, 88.6606],
     defaultSource: 'Community Handpump #1'
   },
   {
@@ -46,6 +51,7 @@ export const WEST_BENGAL_VILLAGES = [
     nameBn: 'কুলতলি (ময়পীঠ উপকূলীয়)',
     district: 'South 24 Parganas',
     subdivision: 'Baruipur',
+    coordinates: [21.9860, 88.5830],
     defaultSource: 'Pond Sand Filter Unit'
   },
   {
@@ -54,6 +60,7 @@ export const WEST_BENGAL_VILLAGES = [
     nameBn: 'দিঘা (শঙ্করপুর)',
     district: 'Purba Medinipur',
     subdivision: 'Contai',
+    coordinates: [21.6266, 87.5074],
     defaultSource: 'Deep Tube Well'
   },
   {
@@ -62,6 +69,7 @@ export const WEST_BENGAL_VILLAGES = [
     nameBn: 'খাতড়া (মুকুটমণিপুর)',
     district: 'Bankura',
     subdivision: 'Khatra',
+    coordinates: [22.9817, 86.8528],
     defaultSource: 'Village Ring Well / Dug Well'
   },
   {
@@ -70,6 +78,7 @@ export const WEST_BENGAL_VILLAGES = [
     nameBn: 'ঝাড়গ্রাম (বেলপাহাড়ী)',
     district: 'Jhargram',
     subdivision: 'Jhargram',
+    coordinates: [22.4539, 86.9937],
     defaultSource: 'Natural Spring / Hilly Stream'
   },
   {
@@ -78,6 +87,7 @@ export const WEST_BENGAL_VILLAGES = [
     nameBn: 'বলরামপুর (বাঘমুণ্ডি)',
     district: 'Purulia',
     subdivision: 'Purulia Sadar',
+    coordinates: [23.1042, 86.2238],
     defaultSource: 'Village Ring Well / Dug Well'
   },
   {
@@ -86,6 +96,7 @@ export const WEST_BENGAL_VILLAGES = [
     nameBn: 'কালিয়াচক (সুজাপুর)',
     district: 'Malda',
     subdivision: 'Malda Sadar',
+    coordinates: [24.8475, 88.0261],
     defaultSource: 'Community Handpump #1'
   },
   {
@@ -94,6 +105,7 @@ export const WEST_BENGAL_VILLAGES = [
     nameBn: 'লালগোলা (ভগবানগোলা)',
     district: 'Murshidabad',
     subdivision: 'Lalbagh',
+    coordinates: [24.4222, 88.2519],
     defaultSource: 'Deep Tube Well'
   },
   {
@@ -102,6 +114,7 @@ export const WEST_BENGAL_VILLAGES = [
     nameBn: 'নাগরাকাটা (ডুয়ার্স)',
     district: 'Jalpaiguri',
     subdivision: 'Mal',
+    coordinates: [26.9038, 88.9133],
     defaultSource: 'Natural Spring / Hilly Stream'
   },
   {
@@ -110,6 +123,7 @@ export const WEST_BENGAL_VILLAGES = [
     nameBn: 'কালিম্পং (পেডং)',
     district: 'Kalimpong',
     subdivision: 'Kalimpong',
+    coordinates: [27.0667, 88.4667],
     defaultSource: 'Natural Spring / Hilly Stream'
   }
 ];

@@ -63,7 +63,7 @@ export default function USSDSimulatorModal({ isOpen, onClose }) {
       const res = await api.sendSmsGateway(phoneNum, userMsg);
       setSmsReplies(prev => [...prev, { 
         type: 'inbound', 
-        text: res.replySms || 'JalSuraksha: Report received and triaged.', 
+        text: res.replySms || 'NeerSense: Report received and triaged.', 
         time: new Date().toLocaleTimeString() 
       }]);
       refreshData();

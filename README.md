@@ -1,4 +1,4 @@
-# JalSuraksha (जल सुरक्षा)
+# NeerSense (नीरसेंस)
 ### Digital Surveillance & Early Warning Platform for Water-Borne Disease Outbreaks in Rural India
 
 **Smart India Hackathon (SIH 2025) — Problem Statement 25001**  
@@ -8,7 +8,7 @@
 
 ## 1. System Overview
 
-**JalSuraksha** is an offline-first, multilingual, AI-powered digital surveillance and early warning platform designed for rural India. The system ingests three streams of continuous data:
+**NeerSense** is an offline-first, multilingual, AI-powered digital surveillance and early warning platform designed for rural India. The system ingests three streams of continuous data:
 1. **Community & ASHA/ANM Field Reports**: Voice-to-text, low-literacy icon interface, household triage, manual H2S test kit logs, and zero-internet USSD (`*999#`)/SMS fallback.
 2. **IoT Water Quality Sensors**: Real-time telemetry (pH, Turbidity, Bacterial E.coli surrogate, TDS, Dissolved Oxygen) via MQTT/HTTP.
 3. **Weather & Monsoon Precipitation Feeds**: Rain runoff and temperature patterns that accelerate bacterial incubation.

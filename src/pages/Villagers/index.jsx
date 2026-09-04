@@ -35,8 +35,8 @@ export default function VillagersPage() {
       let text = '';
       if (activeTab === 'home') {
         text = lang === 'hi'
-          ? 'नमस्ते। जल सुरक्षा और स्वच्छता पोर्टल पर आपका स्वागत है। नीचे स्वच्छता और शुद्ध पानी बनाए रखने के महत्वपूर्ण नियम देखें।'
-          : 'Namaste. Welcome to JalSuraksha. Learn essential steps for maintaining hygiene, clean water, and health in your village.';
+          ? 'नमस्ते। नीरसेंस स्वच्छ पेयजल और स्वास्थ्य पोर्टल पर आपका स्वागत है। नीचे स्वच्छता और शुद्ध पानी बनाए रखने के महत्वपूर्ण नियम देखें।'
+          : 'Namaste. Welcome to NeerSense. Learn essential steps for maintaining hygiene, clean water, and health in your village.';
       } else if (activeTab === 'reports') {
         text = lang === 'hi'
           ? 'यहाँ आप अपने गाँव का नाम डालकर पानी की शुद्धता और सरकारी रिपोर्ट देख सकते हैं।'
@@ -63,7 +63,7 @@ export default function VillagersPage() {
                 <ShieldCheck className="w-3.5 h-3.5" /> Villagers Community Portal
               </span>
               <span className="badge badge-blue">
-                <Droplets className="w-3.5 h-3.5" /> NeerSense Jal Suraksha
+                <Droplets className="w-3.5 h-3.5" /> NeerSense Platform
               </span>
               {!isOnline && <span className="badge badge-high">Offline Mode Active</span>}
             </div>

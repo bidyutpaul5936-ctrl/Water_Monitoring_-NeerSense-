@@ -5,12 +5,12 @@ const LanguageContext = createContext();
 
 export const LanguageProvider = ({ children }) => {
   const [lang, setLang] = useState(() => {
-    return localStorage.getItem('jalsuraksha_lang') || 'en';
+    return localStorage.getItem('neersense_lang') || 'en';
   });
 
   const changeLanguage = (newLang) => {
     setLang(newLang);
-    localStorage.setItem('jalsuraksha_lang', newLang);
+    localStorage.setItem('neersense_lang', newLang);
   };
 
   // Helper function to resolve nested keys like t('nav.dashboard') or t('villager.welcome')

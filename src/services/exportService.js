@@ -21,7 +21,7 @@ export const exportService = {
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.setAttribute('download', `JalSuraksha_District_Risk_Report_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `NeerSense_District_Risk_Report_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -47,7 +47,7 @@ export const exportService = {
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.setAttribute('download', `JalSuraksha_IoT_Sensor_Telemetry_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `NeerSense_IoT_Sensor_Telemetry_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

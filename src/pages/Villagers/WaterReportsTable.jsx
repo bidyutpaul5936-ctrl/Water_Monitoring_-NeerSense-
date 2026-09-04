@@ -48,8 +48,16 @@ export default function WaterReportsTable() {
               value={villageSearch}
               onChange={(e) => setVillageSearch(e.target.value)}
               placeholder="Search by Village Name or Water Source (e.g. Gosaba, Rangabelia, Handpump)..."
+              list="reports-village-datalist"
               className="form-input pl-9 text-xs w-full bg-white"
             />
+            <datalist id="reports-village-datalist">
+              {WEST_BENGAL_VILLAGES.map((v) => (
+                <option key={v.id} value={v.name}>
+                  {v.district} ({v.nameBn})
+                </option>
+              ))}
+            </datalist>
           </div>
           {villageSearch && (
             <button
