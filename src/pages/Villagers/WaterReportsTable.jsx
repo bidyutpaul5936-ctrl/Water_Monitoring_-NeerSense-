@@ -33,8 +33,46 @@ export default function WaterReportsTable() {
         <div className="flex items-center gap-2">
           <span className="badge badge-safe flex items-center gap-1 font-bold">
             <ShieldCheck className="w-3.5 h-3.5" />
-            <span>{approvedReports.length} Government Approved</span>
+            <span>{approvedReports.length} Government Approved & Published</span>
           </span>
+        </div>
+      </div>
+
+      {/* 4-Stage Workflow Stepper */}
+      <div className="mx-4 mt-3 p-3 bg-sky-50/80 border border-sky-200 rounded-xl space-y-2">
+        <div className="text-3xs font-bold text-sky-900 uppercase tracking-wider">Official 4-Stage Verification & Publishing Assurance:</div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-3xs font-semibold">
+          <div className="p-2 rounded-lg bg-emerald-50 border border-emerald-300 text-emerald-950 flex items-center gap-1.5">
+            <span className="w-4 h-4 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-3xs shrink-0">✓</span>
+            <div>
+              <div className="font-bold leading-tight">1. ASHA Field Entry</div>
+              <div className="text-emerald-700 text-4xs">Verified Sampling</div>
+            </div>
+          </div>
+
+          <div className="p-2 rounded-lg bg-teal-50 border border-teal-300 text-teal-950 flex items-center gap-1.5">
+            <span className="w-4 h-4 rounded-full bg-teal-600 text-white flex items-center justify-center font-bold text-3xs shrink-0">✓</span>
+            <div>
+              <div className="font-bold leading-tight">2. Health / Hygiene Dept</div>
+              <div className="text-teal-700 text-4xs">Classified Safety</div>
+            </div>
+          </div>
+
+          <div className="p-2 rounded-lg bg-sky-50 border border-sky-300 text-sky-950 flex items-center gap-1.5">
+            <span className="w-4 h-4 rounded-full bg-sky-700 text-white flex items-center justify-center font-bold text-3xs shrink-0">✓</span>
+            <div>
+              <div className="font-bold leading-tight">3. Government Admin</div>
+              <div className="text-sky-800 text-4xs">Approved & Signed</div>
+            </div>
+          </div>
+
+          <div className="p-2 rounded-lg bg-emerald-600 text-white flex items-center gap-1.5 shadow-sm">
+            <span className="w-4 h-4 rounded-full bg-white text-emerald-900 flex items-center justify-center font-bold text-3xs shrink-0">4</span>
+            <div>
+              <div className="font-bold leading-tight">4. Citizens Portal</div>
+              <div className="text-emerald-100 text-4xs">Live Published Reports</div>
+            </div>
+          </div>
         </div>
       </div>
 

@@ -262,10 +262,6 @@ export default function HealthConditionForm({ onSymptomsChange }) {
     speechService.speak(confirmText, lang);
 
     setTimeout(() => {
-      setSelectedSymptoms([]);
-      setVoiceTranscript('');
-      setPatientName('');
-      setAge('');
       setSubmitSuccess(null);
     }, 4500);
   };
