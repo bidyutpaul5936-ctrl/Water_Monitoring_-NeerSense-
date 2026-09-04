@@ -69,9 +69,11 @@ export default function Navbar() {
               <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-sky-800 text-sky-100 border border-sky-700 text-xs">
                 <span>{currentUser.avatar}</span>
                 <span className="font-semibold text-2xs sm:text-xs">
-                  {currentUser.name}
+                  {currentUser.name || currentUser.title || 'Authorized Staff'}
                 </span>
-                <span className="text-3xs text-sky-300">({currentUser.department || currentUser.title || 'Official'})</span>
+                {currentUser.name && currentUser.title && (
+                  <span className="text-3xs text-sky-300">({currentUser.department || currentUser.title})</span>
+                )}
               </span>
               <button
                 onClick={logoutToVillager}
@@ -111,7 +113,7 @@ export default function Navbar() {
                 <Droplets className="w-5 h-5 text-white" />
               </div>
               <div>
-                <div className="text-sm font-extrabold text-sky-950 leading-tight">JalSuraksha</div>
+                <div className="text-sm font-extrabold text-sky-950 leading-tight">NeerSense</div>
                 <div className="text-2xs text-sky-700 hidden sm:block font-medium">Drinking Water & Health Surveillance</div>
               </div>
             </Link>

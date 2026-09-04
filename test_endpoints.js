@@ -2,7 +2,7 @@
 
 async function testAll() {
   const BASE = 'http://localhost:5000/api';
-  console.log('🧪 [TEST] Starting JalSuraksha API and Intelligence Engine Verification...\n');
+  console.log('🧪 [TEST] Starting NeerSense API and Intelligence Engine Verification...\n');
 
   try {
     // 1. Health

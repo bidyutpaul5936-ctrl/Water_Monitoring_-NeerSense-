@@ -1,6 +1,6 @@
 // offlineDb.js - IndexedDB storage for offline-first symptom and water test caching
 
-const DB_NAME = 'JalSurakshaOfflineDB';
+const DB_NAME = 'NeerSenseOfflineDB';
 const DB_VERSION = 1;
 
 function openDB() {
@@ -42,9 +42,9 @@ export const offlineDb = {
       return item;
     } catch (err) {
       console.warn('IndexedDB fallback to localStorage', err);
-      const queue = JSON.parse(localStorage.getItem('jalsuraksha_offline_symptoms') || '[]');
+      const queue = JSON.parse(localStorage.getItem('neersense_offline_symptoms') || '[]');
       queue.push(symptomReport);
-      localStorage.setItem('jalsuraksha_offline_symptoms', JSON.stringify(queue));
+      localStorage.setItem('neersense_offline_symptoms', JSON.stringify(queue));
       return symptomReport;
     }
   },
@@ -60,7 +60,7 @@ export const offlineDb = {
         req.onerror = () => resolve([]);
       });
     } catch {
-      return JSON.parse(localStorage.getItem('jalsuraksha_offline_symptoms') || '[]');
+      return JSON.parse(localStorage.getItem('neersense_offline_symptoms') || '[]');
     }
   },
 
@@ -73,9 +73,9 @@ export const offlineDb = {
         store.delete(id);
       }
     } catch {
-      let queue = JSON.parse(localStorage.getItem('jalsuraksha_offline_symptoms') || '[]');
+      let queue = JSON.parse(localStorage.getItem('neersense_offline_symptoms') || '[]');
       queue = queue.filter(item => !ids.includes(item.id));
-      localStorage.setItem('jalsuraksha_offline_symptoms', JSON.stringify(queue));
+      localStorage.setItem('neersense_offline_symptoms', JSON.stringify(queue));
     }
   },
 
@@ -97,9 +97,9 @@ export const offlineDb = {
       });
       return item;
     } catch {
-      const queue = JSON.parse(localStorage.getItem('jalsuraksha_offline_tests') || '[]');
+      const queue = JSON.parse(localStorage.getItem('neersense_offline_tests') || '[]');
       queue.push(testReport);
-      localStorage.setItem('jalsuraksha_offline_tests', JSON.stringify(queue));
+      localStorage.setItem('neersense_offline_tests', JSON.stringify(queue));
       return testReport;
     }
   },
@@ -115,7 +115,7 @@ export const offlineDb = {
         req.onerror = () => resolve([]);
       });
     } catch {
-      return JSON.parse(localStorage.getItem('jalsuraksha_offline_tests') || '[]');
+      return JSON.parse(localStorage.getItem('neersense_offline_tests') || '[]');
     }
   },
 
@@ -128,9 +128,9 @@ export const offlineDb = {
         store.delete(id);
       }
     } catch {
-      let queue = JSON.parse(localStorage.getItem('jalsuraksha_offline_tests') || '[]');
+      let queue = JSON.parse(localStorage.getItem('neersense_offline_tests') || '[]');
       queue = queue.filter(item => !ids.includes(item.id));
-      localStorage.setItem('jalsuraksha_offline_tests', JSON.stringify(queue));
+      localStorage.setItem('neersense_offline_tests', JSON.stringify(queue));
     }
   }
 };

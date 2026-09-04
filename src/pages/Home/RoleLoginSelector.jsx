@@ -48,7 +48,7 @@ export default function RoleLoginSelector() {
       portalPath: '/villagers',
       portalLabel: 'Villagers Portal',
       requiresPin: false,
-      userSample: 'Suresh Das (Gosaba Island, WB)',
+      userSample: 'Open Citizen Access',
     },
     {
       role: ROLES.ASHA,
@@ -63,7 +63,7 @@ export default function RoleLoginSelector() {
       portalLabel: 'ASHA Workers Portal',
       requiresPin: true,
       defaultPin: '1234',
-      userSample: 'Priyanka Mondal (ASHA-109, Gosaba)',
+      userSample: 'ASHA Field Worker',
     },
     {
       role: ROLES.HYGIENE,
@@ -78,7 +78,7 @@ export default function RoleLoginSelector() {
       portalLabel: 'Hygiene Portal',
       requiresPin: true,
       defaultPin: '1234',
-      userSample: 'Dr. Meena Kumari (Sanitation Officer)',
+      userSample: 'Sanitation Officer',
     },
     {
       role: ROLES.OFFICIAL,
@@ -93,7 +93,7 @@ export default function RoleLoginSelector() {
       portalLabel: 'Government Admin Portal',
       requiresPin: true,
       defaultPin: '1234',
-      userSample: 'Dr. Suresh Mishra (CDMO & IDSP)',
+      userSample: 'Surveillance Officer (IDSP)',
     },
   ];
 
@@ -169,8 +169,8 @@ export default function RoleLoginSelector() {
         <div className="flex items-center gap-2 bg-sky-50 border border-sky-200 px-3 py-1.5 rounded-lg flex-shrink-0">
           <span className="text-lg">{currentUser.avatar}</span>
           <div className="text-left">
-            <div className="text-3xs text-sky-600 font-bold uppercase tracking-wider">Currently Logged In:</div>
-            <div className="text-xs font-bold text-sky-950">{currentUser.name}</div>
+            <div className="text-3xs text-sky-600 font-bold uppercase tracking-wider">Active Role:</div>
+            <div className="text-xs font-bold text-sky-950">{currentUser.name || currentUser.title || 'Villager / Citizen'}</div>
           </div>
           {activeRole !== ROLES.VILLAGER && (
             <button

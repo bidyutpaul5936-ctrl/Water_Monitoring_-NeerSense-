@@ -18,8 +18,8 @@ export const defaultVillages = [
     riskScore: null,
     riskLevel: 'NO_DATA',
     status: 'NO_DATA',
-    ashaWorker: 'Priyanka Mondal (ASHA-109)',
-    panchayatHead: 'Subrata Das (Pradhan)',
+    ashaWorker: 'Assigned ASHA Worker',
+    panchayatHead: 'Gram Panchayat Office',
     waterSourcesCount: 8,
     activeSensorsCount: 0
   },

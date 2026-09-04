@@ -9,7 +9,7 @@ export const languages = [
 
 export const translations = {
   en: {
-    appTitle: 'JalSuraksha',
+    appTitle: 'NeerSense',
     appSubtitle: 'Water Health Surveillance & Early Warning System',
     tagline: 'Empowering rural communities & health officials against water-borne disease outbreaks',
     roles: {
@@ -126,7 +126,7 @@ export const translations = {
     }
   },
   hi: {
-    appTitle: 'जल सुरक्षा',
+    appTitle: 'NeerSense (नीरसेंस)',
     appSubtitle: 'जल स्वास्थ्य निगरानी एवं महामारी पूर्व चेतावनी प्रणाली',
     tagline: 'जल जनित रोगों से ग्रामीण भारत और स्वास्थ्य तंत्र की सुरक्षा',
     roles: {
@@ -243,7 +243,7 @@ export const translations = {
     }
   },
   bn: {
-    appTitle: 'জল সুরক্ষা',
+    appTitle: 'NeerSense (নীরসেন্স)',
     appSubtitle: 'জলবাহিত রোগ নজরদারি ও আগাম সতর্কবার্তা ব্যবস্থা',
     tagline: 'গ্রামীণ ভারতে বিশুদ্ধ জল ও স্বাস্থ্য সুরক্ষার ডিজিটাল প্ল্যাটফর্ম',
     roles: {
@@ -360,7 +360,7 @@ export const translations = {
     }
   },
   as: {
-    appTitle: 'জল সুৰক্ষা',
+    appTitle: 'NeerSense (নীৰচেন্স)',
     appSubtitle: 'পানীজনিত ৰোগ নিৰীক্ষণ আৰু আগতীয়া সতৰ্কবাৰ্তা ব্যৱস্থা',
     tagline: 'গ্ৰাম্য অসম আৰু উত্তৰ-পূৰ্বাঞ্চলৰ বিশুদ্ধ পানী আৰু স্বাস্থ্য ৰক্ষা',
     roles: {
@@ -477,7 +477,7 @@ export const translations = {
     }
   },
   or: {
-    appTitle: 'ଜଳ ସୁରକ୍ଷା',
+    appTitle: 'NeerSense (ନୀରସେନ୍ସ)',
     appSubtitle: 'ଜଳବାହିତ ରୋଗ ନିରୀକ୍ଷଣ ଏବଂ ଆଗୁଆ ସତର୍କତା ବ୍ୟବସ୍ଥା',
     tagline: 'ଗ୍ରାମାଞ୍ଚଳ ଓ ସ୍ୱାସ୍ଥ୍ୟ ବ୍ୟବସ୍ଥା ପାଇଁ ଡିଜିଟାଲ୍ ସୁରକ୍ଷା',
     roles: {
@@ -594,7 +594,7 @@ export const translations = {
     }
   },
   te: {
-    appTitle: 'జల సురక్ష',
+    appTitle: 'NeerSense (నీర్‌సెన్స్)',
     appSubtitle: 'నీటి ద్వారా వచ్చే వ్యాధుల నిఘా మరియు ముందస్తు హెచ్చరిక వ్యవస్థ',
     tagline: 'గ్రామీణ ప్రజల ఆరోగ్యం & సురక్షిత తాగునీటి పరిరక్షణ',
     roles: {

@@ -106,5 +106,5 @@ app.get('*', (req, res, next) => {
 });
 
 server.listen(PORT, () => {
-  console.log(`[JalSuraksha Combined Server] Running on http://localhost:${PORT}`);
+  console.log(`[NeerSense Combined Server] Running on http://localhost:${PORT}`);
 });

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'jalsuraksha-v1';
+const CACHE_NAME = 'neersense-v1';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',

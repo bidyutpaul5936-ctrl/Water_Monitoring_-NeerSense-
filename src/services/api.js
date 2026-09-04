@@ -1,4 +1,4 @@
-// api.js - Centralized API Service for JalSuraksha
+// api.js - Centralized API Service for NeerSense
 
 const API_BASE = '/api';
 

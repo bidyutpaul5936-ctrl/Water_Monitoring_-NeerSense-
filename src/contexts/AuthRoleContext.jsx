@@ -14,64 +14,67 @@ export const ROLES = {
 const USER_PROFILES = {
   villager: {
     role: ROLES.VILLAGER,
-    name: 'Suresh Das',
-    villageId: 'vil-01',
-    villageName: 'Gosaba Island (Rangabelia)',
-    district: 'South 24 Parganas, West Bengal',
-    phone: '+91-98765-12345',
+    name: '',
+    title: 'Villager / Citizen',
+    villageId: '',
+    villageName: '',
+    district: '',
+    phone: '',
     avatar: '👨‍🌾'
   },
   asha: {
     role: ROLES.ASHA,
-    name: 'Priyanka Mondal',
-    ashaId: 'ASHA-109',
-    villageId: 'vil-01',
-    villageName: 'Gosaba Island (Rangabelia)',
-    district: 'South 24 Parganas, West Bengal',
-    phone: '+91-94371-99881',
+    name: '',
+    title: 'ASHA Field Worker',
+    ashaId: '',
+    villageId: '',
+    villageName: '',
+    district: '',
+    phone: '',
     avatar: '👩‍⚕️'
   },
   hygiene: {
     role: ROLES.HYGIENE,
-    name: 'Dr. Meena Kumari',
-    title: 'District Water & Sanitation Officer',
-    department: 'West Bengal Public Health & Hygiene Dept',
+    name: '',
+    title: 'Water & Sanitation Officer',
+    department: 'Public Health & Hygiene Dept',
     avatar: '👩‍🔬'
   },
   official: {
     role: ROLES.OFFICIAL,
-    name: 'Dr. Suresh Mishra, CDMO',
-    title: 'Chief District Medical Officer & Surveillance In-Charge',
-    jurisdiction: 'West Bengal Monitored Districts',
-    department: 'Integrated Disease Surveillance Programme (IDSP WB)',
+    name: '',
+    title: 'Government Health Officer (CDMO)',
+    jurisdiction: 'District Health Surveillance',
+    department: 'Integrated Disease Surveillance Programme (IDSP)',
     avatar: '🏛️'
   },
   panchayat: {
     role: ROLES.PANCHAYAT,
-    name: 'Subrata Das',
-    title: 'Pradhan / Panchayat Head',
-    villageId: 'vil-01',
-    villageName: 'Rangabelia Gram Panchayat (Gosaba, WB)',
+    name: '',
+    title: 'Gram Panchayat Representative',
+    villageId: '',
+    villageName: '',
     avatar: '🏢'
   },
   admin: {
     role: ROLES.ADMIN,
-    name: 'Admin - NIC Health Informatics WB',
-    title: 'System & IoT Telemetry Administrator',
+    name: '',
+    title: 'System Administrator',
+    department: 'Health Informatics & Telemetry Admin',
     avatar: '⚙️'
   }
 };
 
 export const AuthRoleProvider = ({ children }) => {
   const [activeRole, setActiveRole] = useState(() => {
-    return localStorage.getItem('jalsuraksha_role') || ROLES.VILLAGER;
+    return localStorage.getItem('neersense_role') || ROLES.VILLAGER;
   });
 
   const currentUser = USER_PROFILES[activeRole] || USER_PROFILES.villager;
 
   const setRole = (newRole) => {
     setActiveRole(newRole);
-    localStorage.setItem('jalsuraksha_role', newRole);
+    localStorage.setItem('neersense_role', newRole);
   };
 
   const isGovernment = activeRole === ROLES.OFFICIAL || activeRole === ROLES.ADMIN;
