@@ -16,12 +16,12 @@ router.post('/ussd', (req, res) => {
 
   if (input === '1') {
     return res.json({
-      message: "DIARRHEA/CHOLERA REPORT:\nReply with Village Code:\n1. Majuli\n2. Gosaba\n3. Thuamul\n4. Tauru\n5. Bastar",
+      message: "DIARRHEA/CHOLERA REPORT:\nReply with Village Code:\n1. Gosaba\n2. Sagar Island\n3. Kakdwip\n4. Basanti\n5. Khatra\n6. Jhargram\n7. Digha\n8. Kaliachak",
       continueSession: true
     });
   }
 
-  if (input === '1*1' || input === '1*2' || input === '1*3' || input === '1*4' || input === '1*5') {
+  if (/^1\*[1-8]$/.test(input)) {
     const villageIdx = Number(input.split('*')[1]) - 1;
     const targetVil = state.villages[villageIdx] || state.villages[0];
 
@@ -73,11 +73,14 @@ router.post('/sms-gateway', (req, res) => {
   const upper = (body || '').toUpperCase();
   
   let targetVil = state.villages[0];
-  if (upper.includes('MAJULI')) targetVil = state.villages[0];
-  else if (upper.includes('GOSABA')) targetVil = state.villages[1];
-  else if (upper.includes('THUAMUL') || upper.includes('KALAHANDI')) targetVil = state.villages[2];
-  else if (upper.includes('TAURU') || upper.includes('MEWAT')) targetVil = state.villages[3];
-  else if (upper.includes('BASTAR') || upper.includes('KASPAL')) targetVil = state.villages[4];
+  if (upper.includes('GOSABA')) targetVil = state.villages[0];
+  else if (upper.includes('SAGAR')) targetVil = state.villages[1];
+  else if (upper.includes('KAKDWIP')) targetVil = state.villages[2];
+  else if (upper.includes('BASANTI')) targetVil = state.villages[3];
+  else if (upper.includes('KHATRA') || upper.includes('BANKURA')) targetVil = state.villages[4];
+  else if (upper.includes('JHARGRAM')) targetVil = state.villages[5];
+  else if (upper.includes('DIGHA') || upper.includes('MEDINIPUR')) targetVil = state.villages[6];
+  else if (upper.includes('KALIACHAK') || upper.includes('MALDA')) targetVil = state.villages[7];
 
   const newSym = {
     id: `sms-${Date.now()}`,

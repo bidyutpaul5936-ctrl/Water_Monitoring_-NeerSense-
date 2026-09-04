@@ -31,7 +31,7 @@ export default function AdminPage() {
   const pendingReportsCount = waterReports.filter(r => r.status === 'PENDING_APPROVAL' || (!r.isApproved && r.status !== 'REJECTED')).length;
 
   const handleClearAll = async () => {
-    if (confirm('Reset entire system to empty state? All water reports, symptoms, and alerts will be cleared (No data state).')) {
+    if (confirm('Reset entire system to empty state? All water reports, symptoms, and alerts will be cleared.')) {
       try {
         await api.clearAllData();
         refreshData();
@@ -40,17 +40,6 @@ export default function AdminPage() {
       } catch (err) {
         console.error(err);
       }
-    }
-  };
-
-  const handleLoadSample = async () => {
-    try {
-      await api.loadSampleData();
-      refreshData();
-      setToastMessage({ type: 'success', text: 'Baseline demonstration sample data loaded!' });
-      setTimeout(() => setToastMessage(null), 4000);
-    } catch (err) {
-      console.error(err);
     }
   };
 
@@ -64,20 +53,17 @@ export default function AdminPage() {
               <span className="badge badge-blue flex items-center gap-1">
                 <Building2 className="w-3 h-3" /> Ministry of Jal Shakti &bull; MoHFW
               </span>
-              <span className="badge badge-safe flex items-center gap-1">
-                <ShieldCheck className="w-3 h-3" /> Authorized Officer Access
-              </span>
+              <span className="badge badge-safe">Super-User Authorization</span>
             </div>
             <h1 className="text-xl md:text-2xl font-extrabold text-sky-950">
-              Government Surveillance & Water Quality Approval Desk
+              National Drinking Water Safety Command & Verification Desk
             </h1>
             <p className="text-xs text-sky-800 mt-0.5">
-              Logged in as: <strong>{currentUser.name || 'Dr. Suresh Mishra, CDMO'}</strong> &bull; Integrated Disease Surveillance Programme (IDSP)
+              Review ASHA field reports, verify laboratory test parameters, and publish verified advisories to the public.
             </p>
           </div>
 
           <SystemControlToolbar
-            onLoadSample={handleLoadSample}
             onClearAll={handleClearAll}
           />
         </div>

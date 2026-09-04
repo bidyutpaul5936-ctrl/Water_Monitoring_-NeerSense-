@@ -48,7 +48,7 @@ router.post('/', (req, res) => {
   const newReport = {
     id: `rep-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
     villageId: villageId || 'vil-01',
-    villageName: villageName || 'Majuli Char (Kamalabari)',
+    villageName: villageName || 'Gosaba Island (Rangabelia)',
     sourceName: sourceName || 'Main Village Well',
     sourceType: sourceType || 'Tube Well / Handpump',
     ph: ph !== undefined && ph !== '' ? Number(ph) : 7.2,

@@ -4,16 +4,17 @@ import { useAlertNotification } from '../../contexts/AlertNotificationContext';
 
 export default function OfficialWaterAdvisories() {
   const { waterReports } = useAlertNotification();
+  const approvedReports = waterReports.filter(r => r.status === 'APPROVED' || r.isApproved === true);
 
   return (
     <div className="card">
       <div className="card-header bg-sky-100/70 border-b border-sky-200">
         <h2 className="text-sm font-bold text-sky-950">Official Water Quality Reports Published by District Admin</h2>
-        <span className="badge badge-blue">{waterReports.length} Reports</span>
+        <span className="badge badge-blue">{approvedReports.length} Reports</span>
       </div>
 
       <div className="card-body">
-        {waterReports.length === 0 ? (
+        {approvedReports.length === 0 ? (
           <div className="p-8 text-center rounded-xl bg-sky-50/70 border border-sky-200 space-y-2">
             <Info className="w-8 h-8 text-sky-600 mx-auto" />
             <div className="text-sm font-bold text-sky-950">No Official Water Reports Published Yet</div>
@@ -36,7 +37,7 @@ export default function OfficialWaterAdvisories() {
                 </tr>
               </thead>
               <tbody>
-                {waterReports.map(r => (
+                {approvedReports.map(r => (
                   <tr key={r.id}>
                     <td>
                       <div className="font-bold text-sky-950 text-xs">{r.sourceName}</div>

@@ -6,6 +6,7 @@ import { useOfflineSync } from '../../contexts/OfflineSyncContext';
 import { useAlertNotification } from '../../contexts/AlertNotificationContext';
 import { speechService } from '../../services/speechService';
 import VoiceSymptomRecorder from './VoiceSymptomRecorder';
+import { WEST_BENGAL_VILLAGES } from '../../utils/westBengalVillages';
 
 const SYMPTOMS = [
   { id: 'diarrhea',    label: 'Diarrhea / Loose Motion', icon: '💧', labelKey: 'symptoms.diarrhea' },
@@ -17,13 +18,13 @@ const SYMPTOMS = [
   { id: 'weakness',   label: 'Weakness / Dehydration',   icon: '🛌', labelKey: 'symptoms.weakness' },
 ];
 
-export default function HealthConditionForm() {
+export default function HealthConditionForm({ onSymptomsChange }) {
   const { t, lang } = useLanguage();
   const { currentUser } = useAuthRole();
   const { queueSymptomReport } = useOfflineSync();
   const { villages } = useAlertNotification();
 
-  const [selectedVillageId, setSelectedVillageId] = useState(currentUser.villageId || 'vil-01');
+  const [selectedVillageId, setSelectedVillageId] = useState(currentUser.villageId || 'vil-wb-01');
   const [patientName, setPatientName]             = useState('');
   const [age, setAge]                             = useState('');
   const [gender, setGender]                       = useState('Male');
@@ -34,7 +35,23 @@ export default function HealthConditionForm() {
   const [submitting, setSubmitting]               = useState(false);
   const [submitSuccess, setSubmitSuccess]         = useState(null);
 
-  const activeVillage = villages.find(v => v.id === selectedVillageId) || villages[0] || {};
+  React.useEffect(() => {
+    if (onSymptomsChange) {
+      onSymptomsChange(selectedSymptoms);
+    }
+  }, [selectedSymptoms, onSymptomsChange]);
+
+  const activeVillage = villages.find(v => v.id === selectedVillageId) 
+    || WEST_BENGAL_VILLAGES.find(v => v.id === selectedVillageId) 
+    || villages[0] 
+    || {};
+
+  const handleAutofillWbVillage = (wbVillage) => {
+    setSelectedVillageId(wbVillage.id);
+    if (wbVillage.defaultSource) {
+      setWaterSource(wbVillage.defaultSource);
+    }
+  };
 
   const toggleSymptom = (id) => {
     setSelectedSymptoms(prev =>
@@ -89,7 +106,7 @@ export default function HealthConditionForm() {
 
     const payload = {
       villageId:        selectedVillageId,
-      villageName:      activeVillage.name || 'Majuli Char',
+      villageName:      activeVillage.name || 'Gosaba Island (Rangabelia)',
       patientName:      patientName || 'Villager Report',
       age:              age ? Number(age) : 30,
       gender,
@@ -180,20 +197,69 @@ export default function HealthConditionForm() {
             </div>
           </div>
 
-          {/* Patient Details */}
-          <div className="grid sm:grid-cols-3 gap-3.5 pt-4 border-t border-sky-100">
-            <div>
-              <label className="form-label">Select Your Village / Gram Panchayat</label>
-              <select
-                value={selectedVillageId}
-                onChange={(e) => setSelectedVillageId(e.target.value)}
-                className="form-select"
-              >
-                {villages.map(v => (
-                  <option key={v.id} value={v.id}>{v.name} ({v.district})</option>
-                ))}
-              </select>
+          {/* Patient Details & West Bengal Village Autofill */}
+          <div className="pt-4 border-t border-sky-100 space-y-3">
+            {/* Quick West Bengal Village Autofill Toolbar */}
+            <div className="bg-sky-50/70 p-2.5 rounded-xl border border-sky-200">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 mb-2">
+                <div className="text-2xs font-bold text-sky-950 flex items-center gap-1.5">
+                  <span>⚡</span>
+                  <span>Autofill West Bengal Village (পশ্চিমবঙ্গের গ্রাম নির্বাচন):</span>
+                </div>
+                <span className="text-3xs text-sky-700 font-medium">Tap any village below to instantly autofill</span>
+              </div>
+
+              <div className="flex flex-wrap gap-1.5">
+                {WEST_BENGAL_VILLAGES.slice(0, 8).map((v) => {
+                  const isSelected = selectedVillageId === v.id;
+                  const shortName = v.name.split('(')[0].trim();
+                  return (
+                    <button
+                      key={v.id}
+                      type="button"
+                      onClick={() => handleAutofillWbVillage(v)}
+                      className={`text-3xs font-semibold px-2.5 py-1 rounded-full border transition-all ${
+                        isSelected
+                          ? 'bg-sky-700 text-white border-sky-700 shadow-xs'
+                          : 'bg-white text-sky-800 border-sky-200 hover:bg-sky-100 hover:border-sky-300'
+                      }`}
+                    >
+                      📍 {shortName} ({v.district})
+                    </button>
+                  );
+                })}
+              </div>
             </div>
+
+            <div className="grid sm:grid-cols-3 gap-3.5">
+              <div>
+                <label className="form-label">Select Your Village / Gram Panchayat</label>
+                <select
+                  value={selectedVillageId}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setSelectedVillageId(val);
+                    const wb = WEST_BENGAL_VILLAGES.find(w => w.id === val);
+                    if (wb && wb.defaultSource) setWaterSource(wb.defaultSource);
+                  }}
+                  className="form-select"
+                >
+                  <optgroup label="West Bengal Gram Panchayats (পশ্চিমবঙ্গ)">
+                    {WEST_BENGAL_VILLAGES.map(v => (
+                      <option key={v.id} value={v.id}>
+                        {v.name} ({v.district}) — {v.nameBn}
+                      </option>
+                    ))}
+                  </optgroup>
+                  {villages.filter(v => !v.id.startsWith('vil-wb')).length > 0 && (
+                    <optgroup label="Other Monitored National Villages">
+                      {villages.filter(v => !v.id.startsWith('vil-wb')).map(v => (
+                        <option key={v.id} value={v.id}>{v.name} ({v.district})</option>
+                      ))}
+                    </optgroup>
+                  )}
+                </select>
+              </div>
 
             <div>
               <label className="form-label">Patient Name (Optional)</label>
@@ -228,6 +294,7 @@ export default function HealthConditionForm() {
                 </select>
               </div>
             </div>
+          </div>
           </div>
 
           <div>

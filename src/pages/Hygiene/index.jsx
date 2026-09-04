@@ -1,18 +1,18 @@
 import React, { useState } from 'react';
-import { BookOpen, Volume2, VolumeX, FlaskConical, Droplets, ShieldCheck, HeartPulse } from 'lucide-react';
+import { BookOpen, Volume2, VolumeX, FlaskConical, ShieldCheck, HeartPulse } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuthRole } from '../../contexts/AuthRoleContext';
 import { speechService } from '../../services/speechService';
 import GovernmentAuthGate from '../../components/GovernmentAuthGate';
 import HygieneClassificationDesk from './HygieneClassificationDesk';
-import OrsPreparationSteps from './OrsPreparationSteps';
+
 import WaterBorneDiseaseTable from './WaterBorneDiseaseTable';
 
 export default function HygienePage() {
   const { lang } = useLanguage();
   const { isHygiene, isGovernment } = useAuthRole();
   const [playingAudioKey, setPlayingAudioKey] = useState(null);
-  const [activeTab, setActiveTab] = useState('desk'); // 'desk', 'ors', 'diseases'
+  const [activeTab, setActiveTab] = useState('desk'); // 'desk', 'diseases'
 
   const toggleAudio = (key, text) => {
     if (playingAudioKey === key) {
@@ -82,17 +82,6 @@ export default function HygienePage() {
             <span>Water Safety Classification Desk</span>
           </button>
 
-          <button
-            onClick={() => setActiveTab('ors')}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
-              activeTab === 'ors'
-                ? 'bg-sky-700 text-white shadow-sm'
-                : 'bg-white/80 text-sky-900 hover:bg-white border border-sky-200'
-            }`}
-          >
-            <Droplets className="w-3.5 h-3.5" />
-            <span>Emergency ORS Preparation</span>
-          </button>
 
           <button
             onClick={() => setActiveTab('diseases')}
@@ -113,9 +102,7 @@ export default function HygienePage() {
         <HygieneClassificationDesk />
       )}
 
-      {activeTab === 'ors' && (
-        <OrsPreparationSteps />
-      )}
+
 
       {activeTab === 'diseases' && (
         <WaterBorneDiseaseTable />
