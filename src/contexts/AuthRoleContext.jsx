@@ -30,6 +30,7 @@ const ROLE_PINS = {
 
 export const AuthRoleProvider = ({ children }) => {
   const [activeRole, setActiveRoleState] = useState(ROLES.VILLAGER);
+  const [adminActivePage, setAdminActivePage] = useState('admin'); // 'admin' | 'asha' | 'hygiene' | 'villagers' | 'home'
 
   // ─── Derived role flags ────────────────────────────────────────────────────
   const isGovernment = activeRole === ROLES.OFFICIAL || activeRole === ROLES.ADMIN;
@@ -85,6 +86,8 @@ export const AuthRoleProvider = ({ children }) => {
         // State
         activeRole,
         currentUser,
+        adminActivePage,
+        setAdminActivePage,
         authLoading: false,
         isAuthenticated: true,
         // Role flags

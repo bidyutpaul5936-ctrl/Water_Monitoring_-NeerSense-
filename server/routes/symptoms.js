@@ -43,4 +43,22 @@ router.post('/', (req, res) => {
   res.json({ success: true, count: createdItems.length, items: createdItems });
 });
 
+// PATCH symptom status
+router.patch('/:id/status', (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+  
+  const symptom = state.symptoms.find(s => s.id === id);
+  if (!symptom) {
+    return res.status(404).json({ error: 'Symptom report not found' });
+  }
+
+  symptom.status = status;
+  
+  // Broadcast updated symptoms
+  broadcastWs('INITIAL_STATE', state); // Alternatively, you could broadcast just the symptoms if preferred, but INITIAL_STATE updates all.
+  
+  res.json({ success: true, symptom });
+});
+
 export default router;

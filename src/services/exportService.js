@@ -80,7 +80,7 @@ export const exportService = {
         </style>
       </head>
       <body>
-        <h1>JalSuraksha: District Outbreak Early Warning Dossier</h1>
+        <h1>NeerSense: District Outbreak Early Warning Dossier</h1>
         <div class="header-meta">
           <strong>Ministry of Health & Family Welfare / Ministry of Jal Shakti Surveillance Report</strong><br>
           Generated on: ${new Date().toLocaleString()} | Scope: ${districtName || 'Integrated Multi-Region Grid'}

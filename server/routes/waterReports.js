@@ -200,6 +200,79 @@ router.patch('/:id/reject', (req, res) => {
   res.json({ success: true, report });
 });
 
+// PUT /api/water-reports/:id/alter - Admin alters report data with permission
+router.put('/:id/alter', (req, res) => {
+  const {
+    permissionToken,
+    permissionReason,
+    alteredBy,
+    villageName,
+    sourceName,
+    sourceType,
+    ph,
+    turbidity,
+    tds,
+    bacterialCfu,
+    h2sVialResult,
+    ashaFieldNotes,
+    safetyStatus,
+    advisory,
+    classificationNotes,
+    adminRemarks
+  } = req.body || {};
+
+  const reportIndex = state.waterReports.findIndex(r => r.id === req.params.id);
+  if (reportIndex === -1) {
+    return res.status(404).json({ error: 'Water report not found' });
+  }
+
+  const report = state.waterReports[reportIndex];
+  
+  report.isAltered = true;
+  report.alteredBy = alteredBy || 'Government Administrator (CDMO)';
+  report.alterationReason = permissionReason || 'Administrative protocol revision';
+  report.alterationPermissionToken = permissionToken || `ALT-${Date.now().toString().slice(-4)}`;
+  report.alteredAt = new Date().toISOString();
+  if (adminRemarks) report.adminRemarks = adminRemarks;
+
+  if (villageName !== undefined) report.villageName = villageName;
+  if (sourceName !== undefined) report.sourceName = sourceName;
+  if (sourceType !== undefined) report.sourceType = sourceType;
+  if (ph !== undefined && ph !== '') report.ph = parseFloat(ph);
+  if (turbidity !== undefined && turbidity !== '') report.turbidity = parseFloat(turbidity);
+  if (tds !== undefined && tds !== '') report.tds = parseFloat(tds);
+  if (bacterialCfu !== undefined && bacterialCfu !== '') report.bacterialCfu = parseInt(bacterialCfu) || 0;
+  if (h2sVialResult !== undefined) report.h2sVialResult = h2sVialResult;
+  if (ashaFieldNotes !== undefined) report.ashaFieldNotes = ashaFieldNotes;
+  if (safetyStatus !== undefined) report.safetyStatus = safetyStatus;
+  if (advisory !== undefined) report.advisory = advisory;
+  if (classificationNotes !== undefined) report.classificationNotes = classificationNotes;
+
+  // Re-calculate village status if report is already approved
+  if (report.isApproved || report.status === 'APPROVED') {
+    const targetVil = state.villages.find(v => v.id === report.villageId || v.name === report.villageName);
+    if (targetVil) {
+      if (report.safetyStatus === 'CONTAMINATED') {
+        targetVil.riskScore = 85;
+        targetVil.riskLevel = 'CRITICAL';
+        targetVil.status = 'OUTBREAK_TRIGGERED';
+      } else if (report.safetyStatus === 'WARNING') {
+        targetVil.riskScore = 58;
+        targetVil.riskLevel = 'MODERATE';
+        targetVil.status = 'WATCHLIST';
+      } else {
+        targetVil.riskScore = 18;
+        targetVil.riskLevel = 'SAFE';
+        targetVil.status = 'SAFE';
+      }
+      broadcastWs('VILLAGES_UPDATE', state.villages);
+    }
+  }
+
+  broadcastWs('WATER_REPORTS_UPDATE', state.waterReports);
+  res.json({ success: true, report });
+});
+
 // DELETE a water report (Admin)
 router.delete('/:id', (req, res) => {
   state.waterReports = state.waterReports.filter(r => r.id !== req.params.id);

@@ -8,9 +8,11 @@ import {
   ShieldAlert, 
   Clock,
   Sparkles,
-  Info
+  Info,
+  XCircle
 } from 'lucide-react';
 import { useAuthRole } from '../../contexts/AuthRoleContext';
+import { useAlertNotification } from '../../contexts/AlertNotificationContext';
 import { api } from '../../services/api';
 
 const VILLAGE_OPTIONS = [
@@ -26,6 +28,7 @@ const VILLAGE_OPTIONS = [
 
 export default function AshaWaterDataEntryForm({ onReportSubmitted }) {
   const { currentUser } = useAuthRole();
+  const { refreshData, setWaterReports } = useAlertNotification() || {};
 
   const [selectedVillageId, setSelectedVillageId] = useState('vil-01');
   const [sourceName, setSourceName] = useState('');
@@ -44,17 +47,19 @@ export default function AshaWaterDataEntryForm({ onReportSubmitted }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [submittedReportId, setSubmittedReportId] = useState(null);
+  const [formError, setFormError] = useState('');
 
   const selectedVillage = VILLAGE_OPTIONS.find(v => v.id === selectedVillageId) || VILLAGE_OPTIONS[0];
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setFormError('');
     if (!sourceName.trim()) {
-      alert('Please enter the name of the water source tested.');
+      setFormError('Please enter the name of the water source tested.');
       return;
     }
     if (!ph || !turbidity) {
-      alert('Please enter measured pH and Turbidity test values.');
+      setFormError('Please enter measured pH and Turbidity values before submitting.');
       return;
     }
 
@@ -80,6 +85,13 @@ export default function AshaWaterDataEntryForm({ onReportSubmitted }) {
       };
 
       const res = await api.createWaterReport(payload);
+      if (res?.report) {
+        if (setWaterReports) {
+          setWaterReports(prev => [res.report, ...prev.filter(r => r.id !== res.report.id)]);
+        }
+        refreshData && refreshData();
+      }
+
       setSubmittedReportId(res.report?.id || 'new');
       setSubmitSuccess(true);
       
@@ -93,7 +105,7 @@ export default function AshaWaterDataEntryForm({ onReportSubmitted }) {
       onReportSubmitted && onReportSubmitted(res.report);
     } catch (err) {
       console.error('Failed to submit ASHA water test report', err);
-      alert('Error submitting report. Please verify connection.');
+      setFormError('Submission failed. Please check your connection and try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -156,8 +168,26 @@ export default function AshaWaterDataEntryForm({ onReportSubmitted }) {
         </div>
       </div>
 
+      {/* Inline Form Error Banner */}
+      {formError && (
+        <div className="flex items-start gap-2.5 p-3 rounded-xl bg-red-50 border border-red-200 animate-in fade-in">
+          <XCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="text-xs font-semibold text-red-800">{formError}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setFormError('')}
+            className="text-red-400 hover:text-red-600 transition flex-shrink-0"
+          >
+            <XCircle className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
+      {/* Success Banner */}
       {submitSuccess && (
-        <div className="p-4 bg-emerald-50 border border-emerald-300 rounded-xl space-y-2 animate-fadeIn">
+        <div className="p-4 bg-emerald-50 border border-emerald-300 rounded-xl space-y-2 animate-in fade-in">
           <div className="flex items-center gap-2 text-emerald-900 font-bold text-xs">
             <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
             <span>Water Test Report Successfully Submitted to Hygiene Dept!</span>
