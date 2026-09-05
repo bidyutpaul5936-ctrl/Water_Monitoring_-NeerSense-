@@ -3,10 +3,11 @@ import { BookOpen, Volume2, VolumeX, FlaskConical } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { speechService } from '../../services/speechService';
 import GovernmentAuthGate from '../../components/GovernmentAuthGate';
+import { AlterationModeBanner } from '../../contexts/AlterationPermissionContext';
 import HygieneClassificationDesk from './HygieneClassificationDesk';
 import WaterBorneDiseaseTable from './WaterBorneDiseaseTable';
 
-function HygieneDashboardContent() {
+export function HygieneDashboardContent() {
   const { lang } = useLanguage();
   const [playingAudioKey, setPlayingAudioKey] = useState(null);
   const [activeTab, setActiveTab] = useState('desk'); // 'desk', 'diseases'
@@ -80,6 +81,9 @@ function HygieneDashboardContent() {
           </button>
         </div>
       </div>
+
+      {/* Admin Alteration Mode Guard / Banner */}
+      <AlterationModeBanner department="HYGIENE" />
 
       {/* Tab Content */}
       {activeTab === 'desk' && <HygieneClassificationDesk />}

@@ -4,9 +4,11 @@ import { AuthRoleProvider, useAuthRole } from './contexts/AuthRoleContext';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { OfflineSyncProvider } from './contexts/OfflineSyncContext';
 import { AlertNotificationProvider } from './contexts/AlertNotificationContext';
+import { AlterationPermissionProvider } from './contexts/AlterationPermissionContext';
 
 import Navbar from './components/Navbar';
 import NotificationToast from './components/NotificationToast';
+import ProtectedRoute from './components/ProtectedRoute';
 
 // Page components — one per section
 import HomePage from './pages/Home';
@@ -16,8 +18,7 @@ import HygienePage from './pages/Hygiene';
 import AdminPage from './pages/Admin';
 
 function MainLayout() {
-  // Note: React Router v6 requires <Route> elements to be DIRECT children
-  const { activeRole, isGovernment, ROLES } = useAuthRole();
+  const { activeRole, isGovernment, ROLES, loginAsAsha, loginAsHygiene, loginAsGovernment } = useAuthRole();
 
   return (
     <div className="min-h-screen bg-sky-50 text-slate-800 flex flex-col font-sans">
@@ -29,10 +30,12 @@ function MainLayout() {
           <Route path="/" element={<HomePage />} />
 
           {/* ─── VILLAGERS PORTAL — /villagers ───────────── */}
-          <Route 
-            path="/villagers" 
+          <Route
+            path="/villagers"
             element={
-              isGovernment || activeRole === ROLES.VILLAGER ? (
+              isGovernment ? (
+                <Navigate to="/admin" replace />
+              ) : activeRole === ROLES.VILLAGER ? (
                 <VillagersPage />
               ) : activeRole === ROLES.ASHA ? (
                 <Navigate to="/asha" replace />
@@ -41,51 +44,69 @@ function MainLayout() {
               ) : (
                 <Navigate to="/" replace />
               )
-            } 
+            }
           />
 
           {/* ─── ASHA WORKERS PORTAL — /asha ─────────────── */}
-          <Route 
-            path="/asha" 
+          <Route
+            path="/asha"
             element={
-              isGovernment || activeRole === ROLES.ASHA ? (
-                <AshaPage />
-              ) : activeRole === ROLES.HYGIENE ? (
-                <Navigate to="/hygiene" replace />
+              isGovernment ? (
+                <Navigate to="/admin" replace />
               ) : (
-                <Navigate to="/villagers" replace />
+                <ProtectedRoute
+                  requiredRoles={[ROLES.ASHA]}
+                  loginFn={loginAsAsha}
+                  roleLabel="ASHA Health Worker"
+                  demoPin="5678"
+                  redirectIfWrongRole={activeRole === ROLES.HYGIENE ? '/hygiene' : null}
+                >
+                  <AshaPage />
+                </ProtectedRoute>
               )
-            } 
+            }
           />
 
           {/* ─── HYGIENE DEPT PORTAL — /hygiene ──────────── */}
-          <Route 
-            path="/hygiene" 
+          <Route
+            path="/hygiene"
             element={
-              isGovernment || activeRole === ROLES.HYGIENE ? (
-                <HygienePage />
-              ) : activeRole === ROLES.ASHA ? (
-                <Navigate to="/asha" replace />
+              isGovernment ? (
+                <Navigate to="/admin" replace />
               ) : (
-                <Navigate to="/villagers" replace />
+                <ProtectedRoute
+                  requiredRoles={[ROLES.HYGIENE]}
+                  loginFn={loginAsHygiene}
+                  roleLabel="Hygiene & Sanitation Department"
+                  demoPin="4321"
+                  redirectIfWrongRole={activeRole === ROLES.ASHA ? '/asha' : null}
+                >
+                  <HygienePage />
+                </ProtectedRoute>
               )
-            } 
+            }
           />
 
           {/* ─── GOVERNMENT ADMIN PORTAL — /admin ────────── */}
-          <Route 
-            path="/admin" 
+          <Route
+            path="/admin"
             element={
-              isGovernment ? (
+              <ProtectedRoute
+                requiredRoles={[ROLES.OFFICIAL, ROLES.ADMIN]}
+                loginFn={loginAsGovernment}
+                roleLabel="Government Health Officer (CDMO)"
+                demoPin="1234"
+                redirectIfWrongRole={
+                  activeRole === ROLES.ASHA
+                    ? '/asha'
+                    : activeRole === ROLES.HYGIENE
+                    ? '/hygiene'
+                    : null
+                }
+              >
                 <AdminPage />
-              ) : activeRole === ROLES.ASHA ? (
-                <Navigate to="/asha" replace />
-              ) : activeRole === ROLES.HYGIENE ? (
-                <Navigate to="/hygiene" replace />
-              ) : (
-                <Navigate to="/villagers" replace />
-              )
-            } 
+              </ProtectedRoute>
+            }
           />
 
           {/* ─── FALLBACK — all unmatched URLs → Home ─────── */}
@@ -102,7 +123,7 @@ function MainLayout() {
             <span>&bull; Smart Water-Borne Disease Early Warning System</span>
           </div>
           <div className="text-2xs text-sky-800">
-            Ministry of Jal Shakti &bull; Ministry of Health &amp; Family Welfare &bull; SIH 2025 (PS 25001)
+            Ministry of Jal Shakti &bull; Ministry of Health &amp; Family Welfare &bull; SIH 2026 (PS 25001)
           </div>
         </div>
       </footer>
@@ -117,9 +138,11 @@ export default function App() {
         <AuthRoleProvider>
           <OfflineSyncProvider>
             <AlertNotificationProvider>
-              <Routes>
-                <Route path="/*" element={<MainLayout />} />
-              </Routes>
+              <AlterationPermissionProvider>
+                <Routes>
+                  <Route path="/*" element={<MainLayout />} />
+                </Routes>
+              </AlterationPermissionProvider>
             </AlertNotificationProvider>
           </OfflineSyncProvider>
         </AuthRoleProvider>

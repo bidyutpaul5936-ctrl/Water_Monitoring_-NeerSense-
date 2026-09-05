@@ -62,7 +62,7 @@ router.post('/ussd', (req, res) => {
   }
 
   res.json({
-    message: "Thank you for contacting JalSuraksha. Stay hydrated with safe boiled water. Call 104 for Health Helpline.",
+    message: "Thank you for contacting NeerSense. Stay hydrated with safe boiled water. Call 104 for Health Helpline.",
     continueSession: false
   });
 });
@@ -107,7 +107,7 @@ router.post('/sms-gateway', (req, res) => {
 
   res.json({
     success: true,
-    replySms: `JalSuraksha: Report registered for ${targetVil.name}. ASHA notified. Boil water before drinking.`
+    replySms: `NeerSense: Report registered for ${targetVil.name}. ASHA notified. Boil water before drinking.`
   });
 });
 
