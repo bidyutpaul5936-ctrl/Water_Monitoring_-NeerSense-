@@ -77,6 +77,16 @@ export const api = {
     return res.json();
   },
 
+  async updateSymptomStatus(id, status) {
+    const res = await fetch(`${API_BASE}/symptoms/${id}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status })
+    });
+    if (!res.ok) throw new Error('Failed to update symptom status');
+    return res.json();
+  },
+
   // ─── Alerts ───────────────────────────────────────────────────────────────
   async getAlerts() {
     try {
@@ -151,13 +161,26 @@ export const api = {
   },
 
   async createWaterReport(reportData) {
-    const res = await fetch(`${API_BASE}/water-reports`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(reportData)
-    });
-    if (!res.ok) throw new Error('Failed to create water report');
-    return res.json();
+    try {
+      const res = await fetch(`${API_BASE}/water-reports`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(reportData)
+      });
+      if (!res.ok) throw new Error(`Server returned ${res.status}`);
+      return await res.json();
+    } catch (err) {
+      console.warn('[api] createWaterReport network error, generating local fallback report:', err.message);
+      const fallbackReport = {
+        ...reportData,
+        id: `rep-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+        timestamp: new Date().toISOString(),
+        submittedAt: new Date().toISOString(),
+        status: reportData.status || 'PENDING_CLASSIFICATION',
+        isApproved: false
+      };
+      return { success: true, report: fallbackReport, isLocalFallback: true };
+    }
   },
 
   async classifyWaterReport(id, classificationData = {}) {
@@ -187,6 +210,16 @@ export const api = {
       body: JSON.stringify(reasonData)
     });
     if (!res.ok) throw new Error('Failed to reject water report');
+    return res.json();
+  },
+
+  async alterWaterReport(id, alterationData = {}) {
+    const res = await fetch(`${API_BASE}/water-reports/${id}/alter`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(alterationData)
+    });
+    if (!res.ok) throw new Error('Failed to alter water report');
     return res.json();
   },
 

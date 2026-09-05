@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Droplet, Info, CheckCircle2, AlertTriangle, AlertOctagon, ShieldCheck, Search, MapPin, Sparkles } from 'lucide-react';
+import { Droplet, Info, CheckCircle2, AlertTriangle, AlertOctagon, ShieldCheck, Search, MapPin, Sparkles, BadgeCheck } from 'lucide-react';
 import { useAlertNotification } from '../../contexts/AlertNotificationContext';
 import { WEST_BENGAL_VILLAGES } from '../../utils/westBengalVillages';
 
@@ -35,44 +35,6 @@ export default function WaterReportsTable() {
             <ShieldCheck className="w-3.5 h-3.5" />
             <span>{approvedReports.length} Government Approved & Published</span>
           </span>
-        </div>
-      </div>
-
-      {/* 4-Stage Workflow Stepper */}
-      <div className="mx-4 mt-3 p-3 bg-sky-50/80 border border-sky-200 rounded-xl space-y-2">
-        <div className="text-3xs font-bold text-sky-900 uppercase tracking-wider">Official 4-Stage Verification & Publishing Assurance:</div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-3xs font-semibold">
-          <div className="p-2 rounded-lg bg-emerald-50 border border-emerald-300 text-emerald-950 flex items-center gap-1.5">
-            <span className="w-4 h-4 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-3xs shrink-0">✓</span>
-            <div>
-              <div className="font-bold leading-tight">1. ASHA Field Entry</div>
-              <div className="text-emerald-700 text-4xs">Verified Sampling</div>
-            </div>
-          </div>
-
-          <div className="p-2 rounded-lg bg-teal-50 border border-teal-300 text-teal-950 flex items-center gap-1.5">
-            <span className="w-4 h-4 rounded-full bg-teal-600 text-white flex items-center justify-center font-bold text-3xs shrink-0">✓</span>
-            <div>
-              <div className="font-bold leading-tight">2. Health / Hygiene Dept</div>
-              <div className="text-teal-700 text-4xs">Classified Safety</div>
-            </div>
-          </div>
-
-          <div className="p-2 rounded-lg bg-sky-50 border border-sky-300 text-sky-950 flex items-center gap-1.5">
-            <span className="w-4 h-4 rounded-full bg-sky-700 text-white flex items-center justify-center font-bold text-3xs shrink-0">✓</span>
-            <div>
-              <div className="font-bold leading-tight">3. Government Admin</div>
-              <div className="text-sky-800 text-4xs">Approved & Signed</div>
-            </div>
-          </div>
-
-          <div className="p-2 rounded-lg bg-emerald-600 text-white flex items-center gap-1.5 shadow-sm">
-            <span className="w-4 h-4 rounded-full bg-white text-emerald-900 flex items-center justify-center font-bold text-3xs shrink-0">4</span>
-            <div>
-              <div className="font-bold leading-tight">4. Citizens Portal</div>
-              <div className="text-emerald-100 text-4xs">Live Published Reports</div>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -218,9 +180,12 @@ export default function WaterReportsTable() {
                     <td>
                       <div className="font-bold text-sky-950 text-xs">{report.sourceName}</div>
                       <div className="text-2xs text-slate-500">{report.villageName}</div>
-                      <div className="text-3xs text-emerald-700 font-bold flex items-center gap-1 mt-0.5">
-                        <ShieldCheck className="w-3 h-3 text-emerald-600" />
-                        <span>Approved by: {report.verifiedBy || 'Dr. Suresh Mishra, CDMO'}</span>
+                      <div className="text-3xs font-bold mt-1 flex items-center gap-1 text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-1.5 py-0.5 w-fit">
+                        <CheckCircle2 className="w-2.5 h-2.5 text-emerald-600" />
+                        <span>Govt. Approved &amp; Published</span>
+                      </div>
+                      <div className="text-3xs text-slate-400 mt-0.5">
+                        Verified by: {report.verifiedBy || 'Dr. Suresh Mishra, CDMO'}
                       </div>
                     </td>
                     <td className="text-xs text-slate-600 font-medium">{report.sourceType}</td>

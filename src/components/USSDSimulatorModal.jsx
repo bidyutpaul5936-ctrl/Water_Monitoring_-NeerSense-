@@ -132,7 +132,7 @@ export default function USSDSimulatorModal({ isOpen, onClose }) {
               {/* Phone Speaker & Status bar */}
               <div className="flex items-center justify-between text-[11px] text-slate-500 border-b border-slate-800 pb-2 mb-2">
                 <span className="font-mono">BSNL 2G 📶</span>
-                <span>JalSuraksha *999#</span>
+                <span>NeerSense *999#</span>
                 <span>🔋 85%</span>
               </div>
 

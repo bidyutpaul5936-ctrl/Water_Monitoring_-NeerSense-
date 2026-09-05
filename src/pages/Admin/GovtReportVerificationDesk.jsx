@@ -28,6 +28,8 @@ export default function GovtReportVerificationDesk() {
   const [customStatus, setCustomStatus] = useState({});
   const [rejectReason, setRejectReason] = useState({});
   const [processing, setProcessing] = useState(false);
+  const [actionError, setActionError] = useState('');
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
 
   const safeWaterReports = Array.isArray(waterReports) ? waterReports : [];
 
@@ -37,6 +39,7 @@ export default function GovtReportVerificationDesk() {
 
   const handleApprove = async (report) => {
     setProcessing(true);
+    setActionError('');
     try {
       const payload = {
         verifiedBy: currentUser.name || 'Dr. Suresh Mishra, CDMO & District Surveillance Officer',
@@ -49,7 +52,7 @@ export default function GovtReportVerificationDesk() {
       setVerifyingId(null);
     } catch (err) {
       console.error('Failed to verify water report', err);
-      alert('Error verifying report. Check connection.');
+      setActionError('Error verifying report. Please check your connection and try again.');
     } finally {
       setProcessing(false);
     }
@@ -57,24 +60,26 @@ export default function GovtReportVerificationDesk() {
 
   const handleReject = async (report) => {
     setProcessing(true);
+    setActionError('');
     try {
       const reason = rejectReason[report.id] || 'Field readings inconsistent with baseline. Resampling required.';
       await api.rejectWaterReport(report.id, { reason });
       setRejectingId(null);
     } catch (err) {
       console.error('Failed to reject water report', err);
-      alert('Error rejecting report.');
+      setActionError('Error sending re-test request. Please try again.');
     } finally {
       setProcessing(false);
     }
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Delete this published water report from the system?')) return;
+    setConfirmDeleteId(null);
     try {
       await api.deleteWaterReport(id);
     } catch (err) {
       console.error('Failed to delete report', err);
+      setActionError('Error deleting report. Please try again.');
     }
   };
 
@@ -106,6 +111,17 @@ export default function GovtReportVerificationDesk() {
         </div>
       </div>
 
+      {/* Inline Action Error Banner */}
+      {actionError && (
+        <div className="flex items-start gap-2.5 p-3 rounded-xl bg-red-50 border border-red-200 animate-in fade-in">
+          <AlertTriangle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
+          <p className="text-xs font-semibold text-red-800 flex-1">{actionError}</p>
+          <button onClick={() => setActionError('')} className="text-red-400 hover:text-red-600 transition">
+            <XCircle className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
       {/* 4-Stage Workflow Stepper */}
       <div className="p-3 bg-sky-50/80 border border-sky-200 rounded-xl space-y-2">
         <div className="text-3xs font-bold text-sky-900 uppercase tracking-wider">Official 4-Stage Report Publishing Pipeline:</div>
@@ -122,7 +138,7 @@ export default function GovtReportVerificationDesk() {
             <span className="w-4 h-4 rounded-full bg-teal-600 text-white flex items-center justify-center font-bold text-3xs shrink-0">✓</span>
             <div>
               <div className="font-bold leading-tight">Health / Hygiene Dept</div>
-              <div className="text-teal-700 text-4xs">Classified & Forwarded</div>
+              <div className="text-teal-700 text-4xs">Classified &amp; Forwarded</div>
             </div>
           </div>
 
@@ -134,13 +150,24 @@ export default function GovtReportVerificationDesk() {
             </div>
           </div>
 
-          <div className="p-2 rounded-lg bg-white border border-sky-200 text-sky-900 flex items-center gap-1.5">
-            <span className="w-4 h-4 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-3xs shrink-0">4</span>
-            <div>
-              <div className="font-bold leading-tight">Citizens Portal</div>
-              <div className="text-slate-500 text-4xs">Published Report</div>
+          {/* Step 4 — lights up green when there are approved/published reports */}
+          {approvedReports.length > 0 ? (
+            <div className="p-2 rounded-lg bg-emerald-600 text-white flex items-center gap-1.5 shadow-sm">
+              <span className="w-4 h-4 rounded-full bg-white text-emerald-900 flex items-center justify-center font-bold text-3xs shrink-0">✓</span>
+              <div>
+                <div className="font-bold leading-tight">Citizens Portal</div>
+                <div className="text-emerald-100 text-4xs">{approvedReports.length} Report(s) Live &amp; Published</div>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="p-2 rounded-lg bg-white border border-sky-200 text-sky-900 flex items-center gap-1.5">
+              <span className="w-4 h-4 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-3xs shrink-0">4</span>
+              <div>
+                <div className="font-bold leading-tight">Citizens Portal</div>
+                <div className="text-slate-500 text-4xs">Awaiting Approval</div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -361,7 +388,7 @@ export default function GovtReportVerificationDesk() {
 
                   <button
                     type="button"
-                    onClick={() => handleDelete(report.id)}
+                    onClick={() => setConfirmDeleteId(report.id)}
                     className="self-end sm:self-auto text-2xs text-red-600 hover:text-red-800 p-1.5 hover:bg-red-50 rounded transition flex items-center gap-1"
                     title="Revoke / Delete from Website"
                   >
@@ -369,6 +396,23 @@ export default function GovtReportVerificationDesk() {
                     <span>Revoke</span>
                   </button>
                 </div>
+
+                {/* Inline delete confirmation */}
+                {confirmDeleteId === report.id && (
+                  <div className="flex items-center justify-between gap-2 p-2.5 bg-red-50 border border-red-200 rounded-lg text-xs">
+                    <span className="text-red-800 font-semibold">Remove this report from the public website?</span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setConfirmDeleteId(null)}
+                        className="px-2.5 py-1 bg-white border border-slate-300 text-slate-700 font-semibold rounded text-2xs"
+                      >Cancel</button>
+                      <button
+                        onClick={() => handleDelete(report.id)}
+                        className="px-2.5 py-1 bg-red-600 text-white font-bold rounded text-2xs hover:bg-red-700"
+                      >Yes, Remove</button>
+                    </div>
+                  </div>
+                )}
 
                 <div className="text-xs text-slate-700 bg-sky-50/50 p-2.5 rounded border border-sky-100">
                   <strong>Public Advisory:</strong> {report.advisory}

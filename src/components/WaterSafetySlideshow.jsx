@@ -1,20 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { 
-  ChevronLeft, 
-  ChevronRight, 
-  Pause, 
-  Play, 
   Flame, 
   ShieldCheck, 
   Droplets, 
   Sparkles, 
-  AlertTriangle, 
   HeartPulse, 
   CheckCircle2, 
   ArrowRight,
-  Baby,
-  Clock,
   Waves
 } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -147,21 +140,30 @@ export default function WaterSafetySlideshow() {
   const { lang } = useLanguage();
   const { isGovernment, isVillager } = useAuthRole();
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [isAutoPlaying, setIsAutoPlaying] = useState(true);
+  // Countdown progress (0–100) for the progress bar within each 5-second interval
+  const [progress, setProgress] = useState(0);
 
-  const nextSlide = useCallback(() => {
-    setCurrentSlide((prev) => (prev + 1) % safetySlides.length);
-  }, []);
+  const INTERVAL_MS = 5000;
 
-  const prevSlide = useCallback(() => {
-    setCurrentSlide((prev) => (prev - 1 + safetySlides.length) % safetySlides.length);
-  }, []);
-
+  // Auto-advance every 5 seconds, always on
   useEffect(() => {
-    if (!isAutoPlaying) return;
-    const timer = setInterval(nextSlide, 6000);
-    return () => clearInterval(timer);
-  }, [isAutoPlaying, nextSlide]);
+    const start = Date.now();
+
+    const tick = setInterval(() => {
+      const elapsed = (Date.now() - start) % INTERVAL_MS;
+      setProgress((elapsed / INTERVAL_MS) * 100);
+    }, 50);
+
+    const slideTimer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % safetySlides.length);
+      setProgress(0);
+    }, INTERVAL_MS);
+
+    return () => {
+      clearInterval(tick);
+      clearInterval(slideTimer);
+    };
+  }, [currentSlide]); // reset timer when slide changes (if we ever change via dots)
 
   const slide = safetySlides[currentSlide];
   const SlideIcon = slide.icon;
@@ -180,22 +182,13 @@ export default function WaterSafetySlideshow() {
           </span>
         </div>
 
-        <div className="flex items-center gap-2">
-          <span className="text-2xs text-sky-200 font-mono">
-            {currentSlide + 1} / {safetySlides.length}
-          </span>
-          <button
-            onClick={() => setIsAutoPlaying(!isAutoPlaying)}
-            className="w-6 h-6 rounded bg-sky-800 hover:bg-sky-700 flex items-center justify-center text-sky-200 hover:text-white transition"
-            title={isAutoPlaying ? 'Pause Slideshow' : 'Resume Slideshow'}
-          >
-            {isAutoPlaying ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
-          </button>
-        </div>
+        <span className="text-2xs text-sky-200 font-mono">
+          {currentSlide + 1} / {safetySlides.length}
+        </span>
       </div>
 
       {/* Main Slide Card Body */}
-      <div className="p-5 sm:p-7 relative">
+      <div className="p-5 sm:p-7">
         <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
           {/* Left Column: Icon & Narrative */}
           <div className="flex-1 space-y-3.5">
@@ -265,42 +258,35 @@ export default function WaterSafetySlideshow() {
             ))}
           </div>
         </div>
-
-        {/* Previous / Next Arrow Controls */}
-        <button
-          onClick={() => { prevSlide(); setIsAutoPlaying(false); }}
-          className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/95 border border-sky-300 shadow-md flex items-center justify-center text-sky-700 hover:bg-sky-50 transition"
-          aria-label="Previous Slide"
-        >
-          <ChevronLeft className="w-4 h-4" />
-        </button>
-        <button
-          onClick={() => { nextSlide(); setIsAutoPlaying(false); }}
-          className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/95 border border-sky-300 shadow-md flex items-center justify-center text-sky-700 hover:bg-sky-50 transition"
-          aria-label="Next Slide"
-        >
-          <ChevronRight className="w-4 h-4" />
-        </button>
       </div>
 
-      {/* Slide Navigation Dots */}
-      <div className="flex items-center justify-between px-5 py-2.5 bg-sky-50/70 border-t border-sky-100">
-        <span className="text-3xs text-slate-500">
-          Slide {currentSlide + 1} of {safetySlides.length} &bull; Click dots to navigate
-        </span>
-        <div className="flex items-center gap-1.5">
-          {safetySlides.map((_, idx) => (
-            <button
-              key={idx}
-              onClick={() => { setCurrentSlide(idx); setIsAutoPlaying(false); }}
-              className={`rounded-full transition-all duration-300 ${
-                idx === currentSlide
-                  ? 'w-7 h-2 bg-sky-600'
-                  : 'w-2 h-2 bg-sky-200 hover:bg-sky-300'
-              }`}
-              title={`Go to slide ${idx + 1}`}
-            />
-          ))}
+      {/* Bottom: Passive Indicator Dots + Progress Bar */}
+      <div className="px-5 pb-3 pt-1 bg-sky-50/70 border-t border-sky-100">
+        {/* Thin animated progress bar */}
+        <div className="w-full h-1 bg-sky-200 rounded-full mb-2.5 overflow-hidden">
+          <div
+            className="h-full bg-sky-600 rounded-full transition-all"
+            style={{ width: `${progress}%`, transition: 'width 50ms linear' }}
+          />
+        </div>
+
+        {/* Passive indicator dots — not clickable */}
+        <div className="flex items-center justify-between">
+          <span className="text-3xs text-slate-400">
+            Auto-advancing · Slide {currentSlide + 1} of {safetySlides.length}
+          </span>
+          <div className="flex items-center gap-1.5">
+            {safetySlides.map((_, idx) => (
+              <div
+                key={idx}
+                className={`rounded-full transition-all duration-300 ${
+                  idx === currentSlide
+                    ? 'w-7 h-2 bg-sky-600'
+                    : 'w-2 h-2 bg-sky-200'
+                }`}
+              />
+            ))}
+          </div>
         </div>
       </div>
     </div>

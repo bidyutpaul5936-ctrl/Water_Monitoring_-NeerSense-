@@ -88,6 +88,7 @@ export default function HealthConditionForm({ onSymptomsChange }) {
   const [voiceTranscript, setVoiceTranscript]     = useState('');
   const [submitting, setSubmitting]               = useState(false);
   const [submitSuccess, setSubmitSuccess]         = useState(null);
+  const [formError, setFormError]                 = useState('');
 
   const dropdownRef = useRef(null);
 
@@ -228,8 +229,9 @@ export default function HealthConditionForm({ onSymptomsChange }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setFormError('');
     if (selectedSymptoms.length === 0 && !voiceTranscript) {
-      alert('Please select at least one symptom or speak your condition.');
+      setFormError('Please select at least one symptom or speak your condition.');
       return;
     }
     setSubmitting(true);
@@ -633,6 +635,21 @@ export default function HealthConditionForm({ onSymptomsChange }) {
               <span>{submitting ? 'Transmitting...' : 'Submit Health Condition'}</span>
             </button>
           </div>
+
+          {/* Inline Form Validation Error */}
+          {formError && (
+            <div className="flex items-start gap-2.5 p-3 rounded-xl bg-red-50 border border-red-200 animate-in fade-in">
+              <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
+              <p className="text-xs font-semibold text-red-800 flex-1">{formError}</p>
+              <button
+                type="button"
+                onClick={() => setFormError('')}
+                className="text-red-400 hover:text-red-600 transition"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
 
           {/* Success Notification */}
           {submitSuccess && (

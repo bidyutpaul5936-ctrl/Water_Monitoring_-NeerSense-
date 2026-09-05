@@ -65,6 +65,10 @@ export const AlertNotificationProvider = ({ children }) => {
               if (data.sensors) setSensors(data.sensors);
               if (data.symptoms) setSymptoms(data.symptoms);
               if (data.alerts) setAlerts(data.alerts);
+            } else if (type === 'WATER_REPORTS_UPDATE') {
+              if (Array.isArray(data)) setWaterReports(data);
+            } else if (type === 'VILLAGES_UPDATE') {
+              if (Array.isArray(data)) setVillages(data);
             } else if (type === 'SENSOR_STREAM') {
               setSensors(data);
             } else if (type === 'SENSOR_UPDATE') {
@@ -100,6 +104,21 @@ export const AlertNotificationProvider = ({ children }) => {
 
   const clearNotification = () => setRecentNotification(null);
 
+  const updateWaterReportLocally = useCallback((id, updatedFields) => {
+    setWaterReports((prev) =>
+      prev.map((rep) =>
+        rep.id === id
+          ? {
+              ...rep,
+              ...updatedFields,
+              isAltered: true,
+              alteredAt: updatedFields.alteredAt || new Date().toISOString()
+            }
+          : rep
+      )
+    );
+  }, []);
+
   return (
     <AlertNotificationContext.Provider
       value={{
@@ -114,6 +133,7 @@ export const AlertNotificationProvider = ({ children }) => {
         setVoiceAlertsEnabled,
         isConnected,
         refreshData: fetchFullState,
+        updateWaterReportLocally,
         setVillages,
         setWaterReports,
         setSensors,

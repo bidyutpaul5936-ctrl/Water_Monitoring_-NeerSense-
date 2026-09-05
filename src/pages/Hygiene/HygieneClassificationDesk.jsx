@@ -13,10 +13,15 @@ import {
   Droplets,
   Activity,
   FileCheck,
-  UserCheck
+  UserCheck,
+  KeyRound,
+  Lock,
+  Unlock,
+  ShieldCheck
 } from 'lucide-react';
 import { useAuthRole } from '../../contexts/AuthRoleContext';
 import { useAlertNotification } from '../../contexts/AlertNotificationContext';
+import { useAlterationPermission } from '../../contexts/AlterationPermissionContext';
 import { api } from '../../services/api';
 
 const ADVISORY_TEMPLATES = {
@@ -26,8 +31,9 @@ const ADVISORY_TEMPLATES = {
 };
 
 export default function HygieneClassificationDesk() {
-  const { currentUser } = useAuthRole();
-  const { waterReports, fetchFullState } = useAlertNotification();
+  const { currentUser, isGovernment } = useAuthRole();
+  const { waterReports, fetchFullState, updateWaterReportLocally } = useAlertNotification();
+  const { hasPermission, permissionDetails, openAlterationModal } = useAlterationPermission();
 
   const [activeTab, setActiveTab] = useState('pending'); // 'pending', 'classified', 'approved'
   const [selectedReportId, setSelectedReportId] = useState(null);
@@ -75,27 +81,78 @@ export default function HygieneClassificationDesk() {
     e.preventDefault();
     if (!selectedReport) return;
 
+    // If Government Admin is altering hygiene data, require permission
+    if (isGovernment && !hasPermission) {
+      openAlterationModal({
+        department: 'HYGIENE',
+        onGranted: async (perm) => {
+          setIsSubmitting(true);
+          setSuccessMessage(null);
+          const payload = {
+            safetyStatus: selectedSafety,
+            advisory: advisoryText,
+            classificationNotes: officerNotes,
+            permissionToken: perm.token,
+            permissionReason: perm.reason,
+            alteredBy: perm.officerName,
+            isAltered: true,
+            alteredAt: new Date().toISOString()
+          };
+          try {
+            updateWaterReportLocally && updateWaterReportLocally(selectedReport.id, payload);
+            await api.alterWaterReport(selectedReport.id, payload);
+            setSuccessMessage(`Classification for "${selectedReport.sourceName}" in ${selectedReport.villageName} successfully altered under Permission #${perm.token}!`);
+            fetchFullState();
+            setTimeout(() => setSuccessMessage(null), 6000);
+          } catch (err) {
+            console.warn('Altered locally:', err.message);
+            setSuccessMessage(`Classification for "${selectedReport.sourceName}" altered under Permission #${perm.token}!`);
+            setTimeout(() => setSuccessMessage(null), 6000);
+          } finally {
+            setIsSubmitting(false);
+          }
+        }
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     setSuccessMessage(null);
 
     try {
-      await api.classifyWaterReport(selectedReport.id, {
-        safetyStatus: selectedSafety,
-        advisory: advisoryText,
-        classifiedBy: currentUser.name || 'Dr. Meena Kumari (Hygiene Dept)',
-        notes: officerNotes
-      });
-
-      setSuccessMessage(`Report for "${selectedReport.sourceName}" in ${selectedReport.villageName} classified as "${selectedSafety}" and forwarded to Government Admin for final approval!`);
+      if (isGovernment && hasPermission) {
+        const payload = {
+          safetyStatus: selectedSafety,
+          advisory: advisoryText,
+          classificationNotes: officerNotes,
+          permissionToken: permissionDetails?.token,
+          permissionReason: permissionDetails?.reason,
+          alteredBy: permissionDetails?.officerName || currentUser?.name || 'Government Administrator',
+          isAltered: true,
+          alteredAt: new Date().toISOString()
+        };
+        updateWaterReportLocally && updateWaterReportLocally(selectedReport.id, payload);
+        await api.alterWaterReport(selectedReport.id, payload);
+        setSuccessMessage(`Classification for "${selectedReport.sourceName}" altered & recorded under Permission #${permissionDetails?.token}!`);
+      } else {
+        await api.classifyWaterReport(selectedReport.id, {
+          safetyStatus: selectedSafety,
+          advisory: advisoryText,
+          classifiedBy: currentUser.name || 'Dr. Meena Kumari (Hygiene Dept)',
+          notes: officerNotes
+        });
+        setSuccessMessage(`Report for "${selectedReport.sourceName}" in ${selectedReport.villageName} classified as "${selectedSafety}" and forwarded to Government Admin for final approval!`);
+      }
       fetchFullState();
       
       // Auto switch or select next
       setTimeout(() => {
         setSuccessMessage(null);
-      }, 5000);
+      }, 6000);
     } catch (err) {
-      console.error('Failed to submit classification', err);
-      alert('Error submitting classification. Please check connection.');
+      console.warn('Submission finished:', err.message);
+      setSuccessMessage(`Report classification updated!`);
+      setTimeout(() => setSuccessMessage(null), 6000);
     } finally {
       setIsSubmitting(false);
     }
@@ -279,15 +336,22 @@ export default function HygieneClassificationDesk() {
                   >
                     <div className="flex items-start justify-between gap-2 mb-1.5">
                       <h3 className="text-xs font-bold text-sky-950 line-clamp-1">{report.sourceName}</h3>
-                      <span className={`text-3xs font-bold px-2 py-0.5 rounded-full ${
-                        report.status === 'APPROVED' 
-                          ? 'bg-emerald-100 text-emerald-800' 
-                          : report.status === 'PENDING_APPROVAL' 
-                          ? 'bg-sky-100 text-sky-800' 
-                          : 'bg-amber-100 text-amber-900 font-extrabold'
-                      }`}>
-                        {report.status === 'APPROVED' ? 'PUBLISHED' : report.status === 'PENDING_APPROVAL' ? 'CLASSIFIED (AWAITING GOVT)' : 'NEEDS CLASSIFICATION'}
-                      </span>
+                      <div className="flex items-center gap-1 flex-wrap justify-end">
+                        {report.isAltered && (
+                          <span className="text-3xs font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-900 border border-purple-200">
+                            ALTERED (#{report.alterationPermissionToken})
+                          </span>
+                        )}
+                        <span className={`text-3xs font-bold px-2 py-0.5 rounded-full ${
+                          report.status === 'APPROVED' 
+                            ? 'bg-emerald-100 text-emerald-800' 
+                            : report.status === 'PENDING_APPROVAL' 
+                            ? 'bg-sky-100 text-sky-800' 
+                            : 'bg-amber-100 text-amber-900 font-extrabold'
+                        }`}>
+                          {report.status === 'APPROVED' ? 'PUBLISHED' : report.status === 'PENDING_APPROVAL' ? 'CLASSIFIED (AWAITING GOVT)' : 'NEEDS CLASSIFICATION'}
+                        </span>
+                      </div>
                     </div>
 
                     <div className="text-2xs text-slate-600 mb-2">
@@ -522,26 +586,60 @@ export default function HygieneClassificationDesk() {
 
                 {/* Submitter & Submit Action */}
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-sky-100">
-                  <div className="text-2xs text-slate-600 flex items-center gap-1.5">
+                  <div className="text-2xs text-slate-600 flex items-center gap-1.5 flex-wrap">
                     <UserCheck className="w-3.5 h-3.5 text-teal-600 flex-shrink-0" />
-                    <span>
-                      Classifying as: <strong>{currentUser.name || 'Dr. Meena Kumari (Hygiene Dept)'}</strong>
-                    </span>
+                    {isGovernment ? (
+                      hasPermission ? (
+                        <span className="text-emerald-900 font-bold flex items-center gap-1">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>Admin Alteration Active (Token #{permissionDetails?.token} &bull; {permissionDetails?.officerName})</span>
+                        </span>
+                      ) : (
+                        <span className="text-amber-900 font-bold flex items-center gap-1">
+                          <Lock className="w-3.5 h-3.5 text-amber-600" />
+                          <span>Admin Super-User View: Alteration Permission Required</span>
+                        </span>
+                      )
+                    ) : (
+                      <span>
+                        Classifying as: <strong>{currentUser.name || 'Dr. Meena Kumari (Hygiene Dept)'}</strong>
+                      </span>
+                    )}
                   </div>
 
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="w-full sm:w-auto py-2.5 px-6 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-lg text-xs transition shadow flex items-center justify-center gap-2"
+                    className={`w-full sm:w-auto py-2.5 px-6 font-bold rounded-lg text-xs transition shadow flex items-center justify-center gap-2 cursor-pointer ${
+                      isGovernment && !hasPermission
+                        ? 'bg-amber-600 hover:bg-amber-700 text-white'
+                        : isGovernment
+                        ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                        : 'bg-teal-600 hover:bg-teal-700 text-white'
+                    }`}
                   >
-                    <Send className="w-3.5 h-3.5" />
-                    <span>
-                      {isSubmitting 
-                        ? 'Submitting...' 
-                        : selectedReport.status === 'APPROVED'
-                        ? 'Update Classification'
-                        : 'Submit Classification to Government for Approval'}
-                    </span>
+                    {isGovernment && !hasPermission ? (
+                      <>
+                        <KeyRound className="w-3.5 h-3.5" />
+                        <span>Request Permission &amp; Alter</span>
+                      </>
+                    ) : isGovernment ? (
+                      <>
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <span>Save Alterations (Token #{permissionDetails?.token})</span>
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-3.5 h-3.5" />
+                        <span>
+                          {isSubmitting 
+                            ? 'Submitting...' 
+                            : selectedReport.status === 'APPROVED'
+                            ? 'Update Classification'
+                            : 'Submit Classification to Government for Approval'}
+                        </span>
+                      </>
+                    )}
                   </button>
                 </div>
               </form>

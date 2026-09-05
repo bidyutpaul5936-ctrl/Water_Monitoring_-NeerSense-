@@ -18,6 +18,7 @@ import EmergencyHelplineBanner from './EmergencyHelplineBanner';
 import HygieneSlideshow from './HygieneSlideshow';
 import InstantTreatmentGuide from './InstantTreatmentGuide';
 import OrsPreparationSteps from '../Hygiene/OrsPreparationSteps';
+import VillagerSymptomStatus from './VillagerSymptomStatus';
 
 export default function VillagersPage() {
   const { lang } = useLanguage();
@@ -199,6 +200,9 @@ export default function VillagersPage() {
         <div className="space-y-6">
           {/* Form taking input from the villagers */}
           <HealthConditionForm onSymptomsChange={setSelectedSymptoms} />
+
+          {/* Report status tracker — shows pipeline from submitted → ASHA visit → resolved */}
+          <VillagerSymptomStatus />
 
           {/* Instant basic treatment instructions according to selected symptoms */}
           <InstantTreatmentGuide 

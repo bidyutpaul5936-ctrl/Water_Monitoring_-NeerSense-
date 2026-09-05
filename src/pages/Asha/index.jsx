@@ -3,13 +3,14 @@ import { Activity, FlaskConical, FileText, Stethoscope, TestTube2, ShieldCheck }
 import { useAuthRole } from '../../contexts/AuthRoleContext';
 import { useAlertNotification } from '../../contexts/AlertNotificationContext';
 import GovernmentAuthGate from '../../components/GovernmentAuthGate';
+import { AlterationModeBanner } from '../../contexts/AlterationPermissionContext';
 
 import AshaWaterDataEntryForm from './AshaWaterDataEntryForm';
 import AshaSubmittedReportsList from './AshaSubmittedReportsList';
 import PatientCasesFeed from './PatientCasesFeed';
 import H2SFieldTestLogger from './H2SFieldTestLogger';
 
-function AshaDashboardContent() {
+export function AshaDashboardContent() {
   const { isGovernment, currentUser = {} } = useAuthRole() || {};
   const { symptoms = [], waterReports = [] } = useAlertNotification() || {};
   const [activeTab, setActiveTab] = useState('dataEntry'); // 'dataEntry', 'myReports', 'cases', 'h2sGuide'
@@ -54,6 +55,9 @@ function AshaDashboardContent() {
           </div>
         </div>
       </div>
+
+      {/* Admin Alteration Mode Guard / Banner */}
+      <AlterationModeBanner department="ASHA" />
 
       {/* Navigation Tabs */}
       <div className="flex border-b border-sky-200 gap-2 overflow-x-auto">
