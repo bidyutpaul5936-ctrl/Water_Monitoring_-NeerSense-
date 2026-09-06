@@ -1,0 +1,93 @@
+# NeerSense Firebase Data Connect Mutations
+
+mutation village(
+  $district: String = ""
+  $latitude: Float = 0
+  $longitude: Float = 0
+  $name: String = ""
+  $population: Int = 0
+  $region: String = ""
+  $vulnerabilityIndex: Float = 0
+) @auth(level: PUBLIC) {
+  village_insert(data: {
+    district: $district
+    latitude: $latitude
+    longitude: $longitude
+    name: $name
+    population: $population
+    region: $region
+    vulnerabilityIndex: $vulnerabilityIndex
+  })
+}
+
+mutation waterReport(
+  $villageId: UUID!
+  $reportedAt: Timestamp!
+  $h2sResult: Boolean!
+  $ph: Float
+  $turbidity: Float
+  $eColi: Float
+  $tds: Float
+  $do: Float
+  $recordedById: UUID
+) @auth(level: PUBLIC) {
+  waterReport_insert(data: {
+    villageId: $villageId
+    reportedAt: $reportedAt
+    h2sResult: $h2sResult
+    ph: $ph
+    turbidity: $turbidity
+    eColi: $eColi
+    tds: $tds
+    do: $do
+    recordedById: $recordedById
+  })
+}
+
+mutation symptomCase(
+  $villageId: UUID!
+  $reportedAt: Timestamp!
+  $symptomList: String!
+  $urgencyLevel: Int
+  $triageStatus: String
+  $recordedById: UUID
+) @auth(level: PUBLIC) {
+  symptomCase_insert(data: {
+    villageId: $villageId
+    reportedAt: $reportedAt
+    symptomList: $symptomList
+    urgencyLevel: $urgencyLevel
+    triageStatus: $triageStatus
+    recordedById: $recordedById
+  })
+}
+
+mutation riskDashboard(
+  $villageId: UUID!
+  $riskScore: Int!
+  $calculatedAt: Timestamp!
+  $alertLevel: String
+  $statusNotes: String
+) @auth(level: PUBLIC) {
+  riskDashboard_upsert(data: {
+    villageId: $villageId
+    riskScore: $riskScore
+    calculatedAt: $calculatedAt
+    alertLevel: $alertLevel
+    statusNotes: $statusNotes
+  })
+}
+
+mutation monsoonData(
+  $villageId: UUID!
+  $recordedAt: Timestamp!
+  $rainfallIntensity: Float
+  $humidity: Float
+) @auth(level: PUBLIC) {
+  monsoonData_insert(data: {
+    villageId: $villageId
+    recordedAt: $recordedAt
+    rainfallIntensity: $rainfallIntensity
+    humidity: $humidity
+  })
+}

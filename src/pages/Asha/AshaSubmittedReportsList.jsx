@@ -15,14 +15,15 @@ import {
   AlertTriangle,
   Lock,
   Unlock,
-  Check
+  Check,
+  RefreshCw
 } from 'lucide-react';
 import { useAuthRole } from '../../contexts/AuthRoleContext';
 import { useAlertNotification } from '../../contexts/AlertNotificationContext';
 import { useAlterationPermission } from '../../contexts/AlterationPermissionContext';
 import { api } from '../../services/api';
 
-export default function AshaSubmittedReportsList() {
+export default function AshaSubmittedReportsList({ onRetestRequest }) {
   const { waterReports, refreshData, updateWaterReportLocally } = useAlertNotification();
   const { isGovernment, currentUser } = useAuthRole();
   const { hasPermission, permissionDetails, openAlterationModal } = useAlterationPermission();
@@ -203,7 +204,7 @@ export default function AshaSubmittedReportsList() {
                   </p>
                 </div>
 
-                {/* Potability badge & Admin Alter Button */}
+                {/* Potability badge, Re-Test Button (ASHA), & Admin Alter Button */}
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className={`badge ${
                     report.safetyStatus === 'CONTAMINATED' ? 'badge-danger' :
@@ -211,6 +212,19 @@ export default function AshaSubmittedReportsList() {
                   }`}>
                     {report.safetyStatus}
                   </span>
+
+                  {/* Re-Test Button — shown to ASHA worker on rejected reports */}
+                  {isRejected && !isGovernment && onRetestRequest && (
+                    <button
+                      type="button"
+                      onClick={() => onRetestRequest(report)}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 text-2xs font-bold rounded-lg transition shadow-2xs bg-orange-500 hover:bg-orange-600 text-white animate-pulse hover:animate-none"
+                      title="Government requested a re-test. Click to fill the form again with previous data."
+                    >
+                      <RefreshCw className="w-3 h-3" />
+                      <span>📋 Fill Re-Test Form</span>
+                    </button>
+                  )}
 
                   {isGovernment && (
                     <button

@@ -1,0 +1,55 @@
+# NeerSense Firebase Data Connect (SQL Connect) Schema
+# PostgreSQL backed tables for Water Quality & Health Monitoring
+
+type Village @table {
+  name: String!
+  region: String!
+  district: String!
+  latitude: Float!
+  longitude: Float!
+  population: Int
+  vulnerabilityIndex: Float
+}
+
+type User @table {
+  role: String!
+  preferredLanguage: String!
+  contactNumber: String!
+  assignedVillage: Village
+}
+
+type WaterReport @table {
+  village: Village!
+  reportedAt: Timestamp!
+  h2sResult: Boolean!
+  ph: Float
+  turbidity: Float
+  eColi: Float
+  tds: Float
+  do: Float
+  recordedBy: User
+}
+
+type SymptomCase @table {
+  village: Village!
+  reportedAt: Timestamp!
+  symptomList: String!
+  urgencyLevel: Int
+  triageStatus: String
+  reportedBy: User
+}
+
+type RiskDashboard @table {
+  village: Village!
+  riskScore: Int!
+  calculatedAt: Timestamp!
+  alertLevel: String
+  statusNotes: String
+}
+
+type MonsoonData @table {
+  village: Village!
+  recordedAt: Timestamp!
+  rainfallIntensity: Float
+  humidity: Float
+}

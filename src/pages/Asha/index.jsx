@@ -14,6 +14,17 @@ export function AshaDashboardContent() {
   const { isGovernment, currentUser = {} } = useAuthRole() || {};
   const { symptoms = [], waterReports = [] } = useAlertNotification() || {};
   const [activeTab, setActiveTab] = useState('dataEntry'); // 'dataEntry', 'myReports', 'cases', 'h2sGuide'
+  const [retestReport, setRetestReport] = useState(null); // pre-fill data for re-test
+
+  const handleRetestRequest = (report) => {
+    setRetestReport(report);
+    setActiveTab('dataEntry');
+  };
+
+  const handleTabChange = (tab) => {
+    if (tab !== 'dataEntry') setRetestReport(null);
+    setActiveTab(tab);
+  };
 
   const safeWaterReports = Array.isArray(waterReports) ? waterReports : [];
   const safeSymptoms = Array.isArray(symptoms) ? symptoms : [];
@@ -62,7 +73,7 @@ export function AshaDashboardContent() {
       {/* Navigation Tabs */}
       <div className="flex border-b border-sky-200 gap-2 overflow-x-auto">
         <button
-          onClick={() => setActiveTab('dataEntry')}
+          onClick={() => handleTabChange('dataEntry')}
           className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold rounded-t-lg border-t border-x transition-colors whitespace-nowrap ${
             activeTab === 'dataEntry'
               ? 'bg-white border-sky-300 text-sky-900 border-b-white -mb-px shadow-sm'
@@ -74,7 +85,7 @@ export function AshaDashboardContent() {
         </button>
 
         <button
-          onClick={() => setActiveTab('myReports')}
+          onClick={() => handleTabChange('myReports')}
           className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold rounded-t-lg border-t border-x transition-colors whitespace-nowrap ${
             activeTab === 'myReports'
               ? 'bg-white border-sky-300 text-sky-900 border-b-white -mb-px shadow-sm'
@@ -86,7 +97,7 @@ export function AshaDashboardContent() {
         </button>
 
         <button
-          onClick={() => setActiveTab('cases')}
+          onClick={() => handleTabChange('cases')}
           className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold rounded-t-lg border-t border-x transition-colors whitespace-nowrap ${
             activeTab === 'cases'
               ? 'bg-white border-sky-300 text-sky-900 border-b-white -mb-px shadow-sm'
@@ -98,7 +109,7 @@ export function AshaDashboardContent() {
         </button>
 
         <button
-          onClick={() => setActiveTab('h2sGuide')}
+          onClick={() => handleTabChange('h2sGuide')}
           className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold rounded-t-lg border-t border-x transition-colors whitespace-nowrap ${
             activeTab === 'h2sGuide'
               ? 'bg-white border-sky-300 text-sky-900 border-b-white -mb-px shadow-sm'
@@ -113,9 +124,12 @@ export function AshaDashboardContent() {
       {/* Tab Panels */}
       <div>
         {activeTab === 'dataEntry' && (
-          <AshaWaterDataEntryForm onReportSubmitted={() => setActiveTab('myReports')} />
+          <AshaWaterDataEntryForm 
+            prefillData={retestReport}
+            onReportSubmitted={() => { setRetestReport(null); setActiveTab('myReports'); }} 
+          />
         )}
-        {activeTab === 'myReports' && <AshaSubmittedReportsList />}
+        {activeTab === 'myReports' && <AshaSubmittedReportsList onRetestRequest={handleRetestRequest} />}
         {activeTab === 'cases' && <PatientCasesFeed />}
         {activeTab === 'h2sGuide' && <H2SFieldTestLogger />}
       </div>

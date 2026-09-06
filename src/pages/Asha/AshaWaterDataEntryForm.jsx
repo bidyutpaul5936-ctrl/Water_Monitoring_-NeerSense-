@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Send, 
   FlaskConical, 
@@ -9,7 +9,8 @@ import {
   Clock,
   Sparkles,
   Info,
-  XCircle
+  XCircle,
+  RefreshCw
 } from 'lucide-react';
 import { useAuthRole } from '../../contexts/AuthRoleContext';
 import { useAlertNotification } from '../../contexts/AlertNotificationContext';
@@ -26,7 +27,7 @@ const VILLAGE_OPTIONS = [
   { id: 'vil-08', name: 'Kaliachak (Sujapur GP)', district: 'Malda, West Bengal', defaultSource: 'Deep Aquifer Tube Wells & Standposts' }
 ];
 
-export default function AshaWaterDataEntryForm({ onReportSubmitted }) {
+export default function AshaWaterDataEntryForm({ onReportSubmitted, prefillData }) {
   const { currentUser } = useAuthRole();
   const { refreshData, setWaterReports } = useAlertNotification() || {};
 
@@ -50,6 +51,23 @@ export default function AshaWaterDataEntryForm({ onReportSubmitted }) {
   const [formError, setFormError] = useState('');
 
   const selectedVillage = VILLAGE_OPTIONS.find(v => v.id === selectedVillageId) || VILLAGE_OPTIONS[0];
+
+  // When government requests a re-test, pre-fill the form with the rejected report's data
+  useEffect(() => {
+    if (!prefillData) return;
+    const matchedVillage = VILLAGE_OPTIONS.find(v => v.name === prefillData.villageName);
+    if (matchedVillage) setSelectedVillageId(matchedVillage.id);
+    setSourceName(prefillData.sourceName || '');
+    setSourceType(prefillData.sourceType || 'Tube Well / Handpump');
+    setPh(prefillData.ph ?? '');
+    setTurbidity(prefillData.turbidity ?? '');
+    setTds(prefillData.tds ?? '');
+    setBacterialCfu(prefillData.bacterialCfu ?? '');
+    setH2sVialResult(prefillData.h2sVialResult || 'YELLOW_SAFE');
+    setAshaFieldNotes(prefillData.ashaFieldNotes || '');
+    setSubmitSuccess(false);
+    setFormError('');
+  }, [prefillData]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -77,6 +95,8 @@ export default function AshaWaterDataEntryForm({ onReportSubmitted }) {
         tds: parseFloat(tds) || 0,
         bacterialCfu: parseInt(bacterialCfu) || 0,
         h2sVialResult,
+        ashaId: currentUser.id || 'ASHA-071',
+        ashaName: currentUser.name || 'Kuni Majhi (ASHA-071)',
         submittedBy: currentUser.name || 'Kuni Majhi (ASHA-071)',
         submissionRole: 'ASHA',
         ashaFieldNotes: ashaFieldNotes || 'Field inspection completed by ASHA worker.',
@@ -129,6 +149,27 @@ export default function AshaWaterDataEntryForm({ onReportSubmitted }) {
           <span>Stage 1 of 4: ASHA Field Data Entry</span>
         </div>
       </div>
+
+      {/* Re-Test Mode Banner */}
+      {prefillData && (
+        <div className="flex items-start gap-3 p-3 rounded-xl bg-orange-50 border-2 border-orange-300 animate-in fade-in">
+          <div className="w-7 h-7 rounded-lg bg-orange-500 text-white flex items-center justify-center flex-shrink-0 mt-0.5">
+            <RefreshCw className="w-3.5 h-3.5" />
+          </div>
+          <div className="flex-1">
+            <p className="text-xs font-bold text-orange-900">🔁 Re-Test Requested by Government (CDMO)</p>
+            <p className="text-2xs text-orange-800 mt-0.5 leading-relaxed">
+              The previous report for <strong>{prefillData.sourceName}</strong> was rejected. The form has been pre-filled with the original data.
+              Please conduct a fresh field test, update the readings accordingly, and resubmit.
+            </p>
+            {prefillData.rejectionReason && (
+              <p className="text-2xs text-red-800 mt-1 font-semibold">
+                Rejection reason: &quot;{prefillData.rejectionReason}&quot;
+              </p>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* 4-Stage Workflow Stepper */}
       <div className="p-3 bg-sky-50/80 border border-sky-200 rounded-xl space-y-2">
