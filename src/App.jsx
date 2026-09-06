@@ -1,6 +1,6 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthRoleProvider, useAuthRole } from './contexts/AuthRoleContext';
+import { AuthRoleProvider, useAuthRole, ROLES } from './contexts/AuthRoleContext';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { OfflineSyncProvider } from './contexts/OfflineSyncContext';
 import { AlertNotificationProvider } from './contexts/AlertNotificationContext';
@@ -8,9 +8,11 @@ import { AlterationPermissionProvider } from './contexts/AlterationPermissionCon
 
 import Navbar from './components/Navbar';
 import NotificationToast from './components/NotificationToast';
-import ProtectedRoute from './components/ProtectedRoute';
 
-// Page components — one per section
+// Auth page
+import LoginPage from './pages/Auth/LoginPage';
+
+// Portal page components
 import HomePage from './pages/Home';
 import VillagersPage from './pages/Villagers';
 import AshaPage from './pages/Asha';
@@ -18,99 +20,49 @@ import HygienePage from './pages/Hygiene';
 import AdminPage from './pages/Admin';
 
 function MainLayout() {
-  const { activeRole, isGovernment, ROLES, loginAsAsha, loginAsHygiene, loginAsGovernment } = useAuthRole();
+  const { isAuthenticated, activeRole, isGovernment, isAsha, isHygiene, isVillager } = useAuthRole();
 
+  // 1. If not logged in, show the Login Portal immediately
+  if (!isAuthenticated) {
+    return <LoginPage />;
+  }
+
+  // 2. Once logged in, show the Home page & dedicated role portal (with no cross-portal links)
   return (
     <div className="min-h-screen bg-sky-50 text-slate-800 flex flex-col font-sans">
       <Navbar />
 
       <main className="flex-1 pb-10">
         <Routes>
-          {/* ─── HOME — accessible to all roles ──────────── */}
+          {/* Home Page */}
           <Route path="/" element={<HomePage />} />
 
-          {/* ─── VILLAGERS PORTAL — /villagers ───────────── */}
+          {/* Dedicated Villagers Portal (accessible only to villagers) */}
           <Route
             path="/villagers"
-            element={
-              isGovernment ? (
-                <Navigate to="/admin" replace />
-              ) : activeRole === ROLES.VILLAGER ? (
-                <VillagersPage />
-              ) : activeRole === ROLES.ASHA ? (
-                <Navigate to="/asha" replace />
-              ) : activeRole === ROLES.HYGIENE ? (
-                <Navigate to="/hygiene" replace />
-              ) : (
-                <Navigate to="/" replace />
-              )
-            }
+            element={isVillager ? <VillagersPage /> : <Navigate to="/" replace />}
           />
 
-          {/* ─── ASHA WORKERS PORTAL — /asha ─────────────── */}
+          {/* Dedicated ASHA Portal (accessible only to ASHA workers) */}
           <Route
             path="/asha"
-            element={
-              isGovernment ? (
-                <Navigate to="/admin" replace />
-              ) : (
-                <ProtectedRoute
-                  requiredRoles={[ROLES.ASHA]}
-                  loginFn={loginAsAsha}
-                  roleLabel="ASHA Health Worker"
-                  demoPin="5678"
-                  redirectIfWrongRole={activeRole === ROLES.HYGIENE ? '/hygiene' : null}
-                >
-                  <AshaPage />
-                </ProtectedRoute>
-              )
-            }
+            element={isAsha ? <AshaPage /> : <Navigate to="/" replace />}
           />
 
-          {/* ─── HYGIENE DEPT PORTAL — /hygiene ──────────── */}
+          {/* Dedicated Hygiene Portal (accessible only to Hygiene Dept) */}
           <Route
             path="/hygiene"
-            element={
-              isGovernment ? (
-                <Navigate to="/admin" replace />
-              ) : (
-                <ProtectedRoute
-                  requiredRoles={[ROLES.HYGIENE]}
-                  loginFn={loginAsHygiene}
-                  roleLabel="Hygiene & Sanitation Department"
-                  demoPin="4321"
-                  redirectIfWrongRole={activeRole === ROLES.ASHA ? '/asha' : null}
-                >
-                  <HygienePage />
-                </ProtectedRoute>
-              )
-            }
+            element={isHygiene ? <HygienePage /> : <Navigate to="/" replace />}
           />
 
-          {/* ─── GOVERNMENT ADMIN PORTAL — /admin ────────── */}
+          {/* Dedicated Admin Portal (accessible only to Government Officials) */}
           <Route
             path="/admin"
-            element={
-              <ProtectedRoute
-                requiredRoles={[ROLES.OFFICIAL, ROLES.ADMIN]}
-                loginFn={loginAsGovernment}
-                roleLabel="Government Health Officer (CDMO)"
-                demoPin="1234"
-                redirectIfWrongRole={
-                  activeRole === ROLES.ASHA
-                    ? '/asha'
-                    : activeRole === ROLES.HYGIENE
-                    ? '/hygiene'
-                    : null
-                }
-              >
-                <AdminPage />
-              </ProtectedRoute>
-            }
+            element={isGovernment ? <AdminPage /> : <Navigate to="/" replace />}
           />
 
-          {/* ─── FALLBACK — all unmatched URLs → Home ─────── */}
-          <Route path="*" element={<HomePage />} />
+          {/* All other routes fallback to Home */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
 

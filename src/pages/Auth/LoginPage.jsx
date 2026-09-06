@@ -1,884 +1,370 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { 
+  Droplets, 
+  ShieldCheck, 
+  Phone, 
+  Lock, 
+  User, 
+  MapPin, 
+  ArrowRight, 
+  CheckCircle2, 
+  AlertTriangle,
+  Eye,
+  EyeOff,
+  Sparkles
+} from 'lucide-react';
 import { useAuthRole, ROLES } from '../../contexts/AuthRoleContext';
+import { WEST_BENGAL_VILLAGES } from '../../utils/westBengalVillages';
 
-const ROLE_OPTIONS = [
-  { value: ROLES.VILLAGER, label: 'Villager / Citizen', icon: '👨‍🌾', desc: 'Report water issues & view advisories' },
-  { value: ROLES.ASHA, label: 'ASHA Field Worker', icon: '👩‍⚕️', desc: 'Conduct field surveys & log health data' },
-  { value: ROLES.HYGIENE, label: 'Water & Sanitation Officer', icon: '👩‍🔬', desc: 'Monitor water quality & hygiene reports' },
-  { value: ROLES.OFFICIAL, label: 'Health Officer (CDMO)', icon: '🏛️', desc: 'District-level health surveillance' },
-  { value: ROLES.PANCHAYAT, label: 'Gram Panchayat Rep.', icon: '🏢', desc: 'Village-level administration' },
-  { value: ROLES.ADMIN, label: 'System Administrator', icon: '⚙️', desc: 'Full system access & configuration' },
+const ROLES_LIST = [
+  {
+    id: ROLES.VILLAGER,
+    label: 'Villager / Citizen',
+    labelHi: 'ग्रामीण / नागरिक',
+    icon: '👨‍🌾',
+    badge: 'Public Access',
+    color: 'emerald',
+    desc: 'Check local water safety, report symptoms, and access boiling guidelines.'
+  },
+  {
+    id: ROLES.ASHA,
+    label: 'ASHA Field Worker',
+    labelHi: 'आशा कार्यकर्ता',
+    icon: '👩‍⚕️',
+    badge: 'Field Inspection',
+    color: 'sky',
+    desc: 'Enter water testing field data, record H2S vial tests, and log patient cases.'
+  },
+  {
+    id: ROLES.HYGIENE,
+    label: 'Hygiene & Sanitation Dept',
+    labelHi: 'स्वच्छता विभाग',
+    icon: '👩‍🔬',
+    badge: 'Lab & Verification',
+    color: 'teal',
+    desc: 'Review microbiological readings, classify water safety, and issue advisories.'
+  },
+  {
+    id: ROLES.ADMIN,
+    label: 'District Admin / CDMO',
+    labelHi: 'जिला स्वास्थ्य अधिकारी',
+    icon: '🏛️',
+    badge: 'Official Authority',
+    color: 'indigo',
+    desc: 'Review classifications, verify official water reports, and publish to public portal.'
+  }
 ];
 
 export default function LoginPage() {
-  const { loginWithEmail, registerWithEmail, authError } = useAuthRole();
-  const navigate = useNavigate();
+  const { loginWithPhone } = useAuthRole();
 
-  const [mode, setMode] = useState('login'); // 'login' | 'register'
-  const [step, setStep] = useState(1);        // step 1: credentials, step 2: profile (register only)
-  const [loading, setLoading] = useState(false);
-  const [localError, setLocalError] = useState('');
-
-  // Form state
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [selectedRole, setSelectedRole] = useState(ROLES.VILLAGER);
-  const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
-  const [villageId, setVillageId] = useState('');
-  const [villageName, setVillageName] = useState('');
-  const [district, setDistrict] = useState('');
-  const [ashaId, setAshaId] = useState('');
-  const [department, setDepartment] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
+  const [pin, setPin] = useState('');
+  const [name, setName] = useState('');
+  const [villageId, setVillageId] = useState('vil-01');
+  const [showPin, setShowPin] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
-  const resetForm = () => {
-    setEmail(''); setPassword(''); setConfirmPassword('');
-    setName(''); setPhone(''); setVillageId(''); setVillageName('');
-    setDistrict(''); setAshaId(''); setDepartment('');
-    setLocalError(''); setStep(1);
-    setSelectedRole(ROLES.VILLAGER);
+  const selectedRoleObj = ROLES_LIST.find(r => r.id === selectedRole) || ROLES_LIST[0];
+
+  const handleRoleSelect = (roleId) => {
+    setSelectedRole(roleId);
+    setErrorMessage('');
+    // Prefill representative name based on role if blank
+    if (!name) {
+      if (roleId === ROLES.ASHA) setName('Kuni Majhi (ASHA-071)');
+      else if (roleId === ROLES.HYGIENE) setName('Dr. Meena Kumari (Hygiene Dept)');
+      else if (roleId === ROLES.ADMIN) setName('Dr. Suresh Mishra (CDMO)');
+      else setName('Citizen User');
+    }
   };
 
-  const switchMode = (m) => { setMode(m); resetForm(); };
-
-  const handleLoginSubmit = async (e) => {
-    e.preventDefault();
-    setLocalError('');
-    setLoading(true);
-    const result = await loginWithEmail(email, password);
-    setLoading(false);
-    if (result.success) navigate('/');
-    else setLocalError(result.message);
+  const handleQuickDemo = (roleId, demoPhone, demoPin, demoName) => {
+    setSelectedRole(roleId);
+    setPhone(demoPhone);
+    setPin(demoPin);
+    setName(demoName);
+    setErrorMessage('');
   };
 
-  const handleRegisterStep1 = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setLocalError('');
-    if (password !== confirmPassword) {
-      setLocalError('Passwords do not match.');
+    setErrorMessage('');
+
+    const cleanPhone = phone.replace(/\D/g, '');
+    if (cleanPhone.length < 10) {
+      setErrorMessage('Please enter a valid 10-digit mobile phone number.');
       return;
     }
-    if (password.length < 6) {
-      setLocalError('Password must be at least 6 characters.');
-      return;
+
+    setIsSubmitting(true);
+
+    const selectedVillage = WEST_BENGAL_VILLAGES.find(v => v.id === villageId) || { name: 'Gosaba Island (Rangabelia)' };
+
+    try {
+      const res = await loginWithPhone({
+        phone: cleanPhone,
+        pin: pin || '1234',
+        role: selectedRole,
+        name: name.trim() || selectedRoleObj.label,
+        villageId,
+        villageName: selectedVillage.name
+      });
+
+      if (!res.success) {
+        setErrorMessage(res.message || 'Login failed. Please check your credentials.');
+      }
+    } catch (err) {
+      setErrorMessage(err.message || 'Error connecting to database. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
-    setStep(2);
   };
-
-  const handleRegisterSubmit = async (e) => {
-    e.preventDefault();
-    setLocalError('');
-    if (!name.trim()) { setLocalError('Full name is required.'); return; }
-    setLoading(true);
-    const extraData = { name, phone, villageId, villageName, district, ashaId, department };
-    const result = await registerWithEmail(email, password, selectedRole, extraData);
-    setLoading(false);
-    if (result.success) navigate('/');
-    else setLocalError(result.message);
-  };
-
-  const error = localError || authError;
-  const selectedRoleInfo = ROLE_OPTIONS.find(r => r.value === selectedRole);
 
   return (
-    <div className="neersense-login-root">
-      {/* Animated background */}
-      <div className="login-bg">
-        <div className="login-blob login-blob-1" />
-        <div className="login-blob login-blob-2" />
-        <div className="login-blob login-blob-3" />
-        <div className="login-grid-overlay" />
+    <div className="min-h-screen bg-gradient-to-br from-sky-900 via-sky-800 to-slate-900 flex flex-col justify-center py-10 px-4 sm:px-6 lg:px-8 font-sans">
+      {/* Background Decorative Rings */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
+        <div className="absolute -top-40 -right-40 w-96 h-96 rounded-full bg-sky-400 blur-3xl" />
+        <div className="absolute -bottom-40 -left-40 w-96 h-96 rounded-full bg-teal-400 blur-3xl" />
       </div>
 
-      <div className="login-container">
-        {/* Logo / Brand */}
-        <div className="login-brand">
-          <div className="login-logo-ring">
-            <span className="login-logo-drop">💧</span>
+      <div className="relative max-w-xl w-full mx-auto space-y-6">
+        {/* National Portal Brand Header */}
+        <div className="text-center space-y-2">
+          <div className="inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-white/10 backdrop-blur border border-white/20 text-sky-200 text-xs font-semibold">
+            <ShieldCheck className="w-4 h-4 text-emerald-400" />
+            <span>Ministry of Jal Shakti &bull; Ministry of Health &bull; SIH 2026</span>
           </div>
-          <div>
-            <h1 className="login-brand-name">NeerSense</h1>
-            <p className="login-brand-tagline">Smart Water-Borne Disease Early Warning</p>
+
+          <div className="flex items-center justify-center gap-3 pt-2">
+            <div className="w-12 h-12 rounded-2xl bg-sky-500 flex items-center justify-center text-white shadow-lg shadow-sky-500/40">
+              <Droplets className="w-7 h-7" />
+            </div>
+            <h1 className="text-3xl font-extrabold text-white tracking-tight">NeerSense</h1>
           </div>
+          <p className="text-sm text-sky-200 font-medium">
+            Unified Water-Borne Disease Surveillance & Early Warning Portal
+          </p>
         </div>
 
-        {/* Card */}
-        <div className="login-card">
-          {/* Tab switcher */}
-          <div className="login-tabs">
-            <button
-              id="tab-login"
-              className={`login-tab ${mode === 'login' ? 'login-tab-active' : ''}`}
-              onClick={() => switchMode('login')}
-            >
-              Sign In
-            </button>
-            <button
-              id="tab-register"
-              className={`login-tab ${mode === 'register' ? 'login-tab-active' : ''}`}
-              onClick={() => switchMode('register')}
-            >
-              Create Account
-            </button>
-            <div className={`login-tab-indicator ${mode === 'register' ? 'login-tab-indicator-right' : ''}`} />
+        {/* Main Login Card */}
+        <div className="bg-white rounded-2xl shadow-2xl border border-sky-100 overflow-hidden">
+          {/* Header Strip */}
+          <div className="bg-sky-50 px-6 py-4 border-b border-sky-200/80 flex items-center justify-between">
+            <div>
+              <h2 className="text-base font-extrabold text-sky-950">Role & Phone Authentication</h2>
+              <p className="text-xs text-sky-700">Select your role and sign in with your phone number</p>
+            </div>
+            <span className="px-2.5 py-1 rounded-full bg-sky-200/80 text-sky-900 text-2xs font-bold uppercase tracking-wider">
+              {selectedRoleObj.badge}
+            </span>
           </div>
 
-          {/* ─── LOGIN FORM ─────────────────────────────────────────────── */}
-          {mode === 'login' && (
-            <form id="login-form" onSubmit={handleLoginSubmit} className="login-form">
-              <h2 className="login-form-title">Welcome back</h2>
-              <p className="login-form-sub">Sign in to your NeerSense account</p>
+          <div className="p-6 sm:p-8 space-y-6">
+            {/* 1. Role Selection Grid */}
+            <div className="space-y-2">
+              <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider">
+                Select Your Role
+              </label>
+              <div className="grid grid-cols-2 gap-2.5">
+                {ROLES_LIST.map((r) => {
+                  const isSelected = selectedRole === r.id;
+                  return (
+                    <button
+                      key={r.id}
+                      type="button"
+                      onClick={() => handleRoleSelect(r.id)}
+                      className={`p-3 rounded-xl border text-left transition-all flex flex-col justify-between ${
+                        isSelected
+                          ? 'border-sky-600 bg-sky-50/90 ring-2 ring-sky-500 shadow-sm'
+                          : 'border-slate-200 bg-slate-50/60 hover:bg-slate-100/80 text-slate-700'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-2xl">{r.icon}</span>
+                        {isSelected && <CheckCircle2 className="w-4 h-4 text-sky-600" />}
+                      </div>
+                      <div className="mt-2">
+                        <div className={`text-xs font-bold ${isSelected ? 'text-sky-950' : 'text-slate-800'}`}>
+                          {r.label}
+                        </div>
+                        <div className="text-3xs text-slate-500 mt-0.5">{r.desc}</div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
 
-              <div className="login-field">
-                <label htmlFor="login-email">Email Address</label>
-                <div className="login-input-wrap">
-                  <span className="login-input-icon">✉️</span>
+            {/* Quick Demo Credentials Bar */}
+            <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1.5">
+              <div className="text-3xs font-extrabold text-slate-500 uppercase tracking-wider flex items-center gap-1">
+                <Sparkles className="w-3 h-3 text-amber-500" />
+                <span>Quick Demo Fill (One-Tap Test):</span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 text-3xs">
+                <button
+                  type="button"
+                  onClick={() => handleQuickDemo(ROLES.VILLAGER, '9876543210', '1234', 'Ramesh Haldar (Citizen)')}
+                  className="px-2 py-1 bg-white border border-slate-200 hover:border-emerald-400 rounded text-slate-700 font-semibold text-left truncate"
+                >
+                  👨‍🌾 Villager
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickDemo(ROLES.ASHA, '9876543211', '5678', 'Kuni Majhi (ASHA-071)')}
+                  className="px-2 py-1 bg-white border border-slate-200 hover:border-sky-400 rounded text-slate-700 font-semibold text-left truncate"
+                >
+                  👩‍⚕️ ASHA Field
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickDemo(ROLES.HYGIENE, '9876543212', '4321', 'Dr. Meena Kumari (Hygiene)')}
+                  className="px-2 py-1 bg-white border border-slate-200 hover:border-teal-400 rounded text-slate-700 font-semibold text-left truncate"
+                >
+                  👩‍🔬 Hygiene Dept
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickDemo(ROLES.ADMIN, '9876543213', '1234', 'Dr. Suresh Mishra (CDMO)')}
+                  className="px-2 py-1 bg-white border border-slate-200 hover:border-indigo-400 rounded text-slate-700 font-semibold text-left truncate"
+                >
+                  🏛️ Govt Admin
+                </button>
+              </div>
+            </div>
+
+            {/* Error Banner */}
+            {errorMessage && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
+                <span>{errorMessage}</span>
+              </div>
+            )}
+
+            {/* 2. Phone Credentials Form */}
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Phone Input */}
+              <div className="space-y-1">
+                <label className="block text-xs font-bold text-slate-700">
+                  Mobile Phone Number <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 text-xs font-bold">
+                    +91
+                  </div>
                   <input
-                    id="login-email"
-                    type="email"
-                    value={email}
-                    onChange={e => setEmail(e.target.value)}
-                    placeholder="you@example.com"
+                    type="tel"
+                    maxLength={10}
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
+                    placeholder="9876543210"
                     required
-                    autoComplete="email"
+                    className="w-full pl-12 pr-4 py-2.5 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none font-semibold text-slate-900"
                   />
+                  <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-slate-400">
+                    <Phone className="w-4 h-4" />
+                  </div>
                 </div>
               </div>
 
-              <div className="login-field">
-                <label htmlFor="login-password">Password</label>
-                <div className="login-input-wrap">
-                  <span className="login-input-icon">🔒</span>
+              {/* Name / Identification */}
+              <div className="space-y-1">
+                <label className="block text-xs font-bold text-slate-700">
+                  Full Name / Worker Identification
+                </label>
+                <div className="relative">
                   <input
-                    id="login-password"
-                    type={showPassword ? 'text' : 'password'}
-                    value={password}
-                    onChange={e => setPassword(e.target.value)}
-                    placeholder="Your password"
-                    required
-                    autoComplete="current-password"
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder={selectedRoleObj.label}
+                    className="w-full pl-10 pr-4 py-2.5 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none text-slate-900"
                   />
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                    <User className="w-4 h-4" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Security PIN / Password */}
+              <div className="space-y-1">
+                <label className="block text-xs font-bold text-slate-700">
+                  Security PIN / Passcode
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPin ? 'text' : 'password'}
+                    value={pin}
+                    onChange={(e) => setPin(e.target.value)}
+                    placeholder="Enter 4-digit PIN"
+                    className="w-full pl-10 pr-10 py-2.5 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none text-slate-900"
+                  />
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                    <Lock className="w-4 h-4" />
+                  </div>
                   <button
                     type="button"
-                    className="login-eye-btn"
-                    onClick={() => setShowPassword(v => !v)}
-                    tabIndex={-1}
+                    onClick={() => setShowPin(!showPin)}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600"
                   >
-                    {showPassword ? '🙈' : '👁️'}
+                    {showPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
               </div>
 
-              {error && <div className="login-error">{error}</div>}
-
-              <button
-                id="login-submit-btn"
-                type="submit"
-                className="login-cta-btn"
-                disabled={loading}
-              >
-                {loading ? <span className="login-spinner" /> : null}
-                {loading ? 'Signing in…' : 'Sign In →'}
-              </button>
-
-              <p className="login-switch-text">
-                Don't have an account?{' '}
-                <button type="button" className="login-link-btn" onClick={() => switchMode('register')}>
-                  Create one
-                </button>
-              </p>
-            </form>
-          )}
-
-          {/* ─── REGISTER FORM ──────────────────────────────────────────── */}
-          {mode === 'register' && (
-            <>
-              {/* Step indicator */}
-              <div className="login-steps">
-                <div className={`login-step ${step >= 1 ? 'login-step-active' : ''}`}>
-                  <div className="login-step-num">1</div>
-                  <span>Credentials</span>
-                </div>
-                <div className="login-step-line" />
-                <div className={`login-step ${step >= 2 ? 'login-step-active' : ''}`}>
-                  <div className="login-step-num">2</div>
-                  <span>Profile</span>
-                </div>
-              </div>
-
-              {step === 1 && (
-                <form id="register-form-step1" onSubmit={handleRegisterStep1} className="login-form">
-                  <h2 className="login-form-title">Create your account</h2>
-                  <p className="login-form-sub">Step 1 of 2 — Account credentials</p>
-
-                  <div className="login-field">
-                    <label htmlFor="reg-email">Email Address</label>
-                    <div className="login-input-wrap">
-                      <span className="login-input-icon">✉️</span>
-                      <input
-                        id="reg-email"
-                        type="email"
-                        value={email}
-                        onChange={e => setEmail(e.target.value)}
-                        placeholder="you@example.com"
-                        required
-                        autoComplete="email"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="login-field">
-                    <label htmlFor="reg-password">Password</label>
-                    <div className="login-input-wrap">
-                      <span className="login-input-icon">🔒</span>
-                      <input
-                        id="reg-password"
-                        type={showPassword ? 'text' : 'password'}
-                        value={password}
-                        onChange={e => setPassword(e.target.value)}
-                        placeholder="Min. 6 characters"
-                        required
-                        autoComplete="new-password"
-                      />
-                      <button
-                        type="button"
-                        className="login-eye-btn"
-                        onClick={() => setShowPassword(v => !v)}
-                        tabIndex={-1}
-                      >
-                        {showPassword ? '🙈' : '👁️'}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="login-field">
-                    <label htmlFor="reg-confirm-password">Confirm Password</label>
-                    <div className="login-input-wrap">
-                      <span className="login-input-icon">🔑</span>
-                      <input
-                        id="reg-confirm-password"
-                        type={showPassword ? 'text' : 'password'}
-                        value={confirmPassword}
-                        onChange={e => setConfirmPassword(e.target.value)}
-                        placeholder="Repeat your password"
-                        required
-                        autoComplete="new-password"
-                      />
-                    </div>
-                  </div>
-
-                  {error && <div className="login-error">{error}</div>}
-
-                  <button id="reg-next-btn" type="submit" className="login-cta-btn">
-                    Next: Set Up Profile →
-                  </button>
-
-                  <p className="login-switch-text">
-                    Already have an account?{' '}
-                    <button type="button" className="login-link-btn" onClick={() => switchMode('login')}>
-                      Sign in
-                    </button>
-                  </p>
-                </form>
-              )}
-
-              {step === 2 && (
-                <form id="register-form-step2" onSubmit={handleRegisterSubmit} className="login-form">
-                  <h2 className="login-form-title">Your Profile</h2>
-                  <p className="login-form-sub">Step 2 of 2 — Select your role & details</p>
-
-                  <div className="login-field">
-                    <label htmlFor="reg-name">Full Name *</label>
-                    <div className="login-input-wrap">
-                      <span className="login-input-icon">👤</span>
-                      <input
-                        id="reg-name"
-                        type="text"
-                        value={name}
-                        onChange={e => setName(e.target.value)}
-                        placeholder="Your full name"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  {/* Role selector */}
-                  <div className="login-field">
-                    <label>Select Your Role *</label>
-                    <div className="login-role-grid">
-                      {ROLE_OPTIONS.map(r => (
-                        <button
-                          key={r.value}
-                          type="button"
-                          id={`role-option-${r.value}`}
-                          className={`login-role-card ${selectedRole === r.value ? 'login-role-card-active' : ''}`}
-                          onClick={() => setSelectedRole(r.value)}
-                        >
-                          <span className="login-role-icon">{r.icon}</span>
-                          <span className="login-role-label">{r.label}</span>
-                        </button>
+              {/* Assigned Village (if Villager or ASHA) */}
+              {(selectedRole === ROLES.VILLAGER || selectedRole === ROLES.ASHA) && (
+                <div className="space-y-1">
+                  <label className="block text-xs font-bold text-slate-700">
+                    Assigned Village / Gram Panchayat
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={villageId}
+                      onChange={(e) => setVillageId(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2.5 text-xs sm:text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none text-slate-900 bg-white"
+                    >
+                      {WEST_BENGAL_VILLAGES.map((v) => (
+                        <option key={v.id} value={v.id}>
+                          {v.name} ({v.district})
+                        </option>
                       ))}
-                    </div>
-                    {selectedRoleInfo && (
-                      <p className="login-role-desc">{selectedRoleInfo.icon} {selectedRoleInfo.desc}</p>
-                    )}
-                  </div>
-
-                  {/* Phone */}
-                  <div className="login-field">
-                    <label htmlFor="reg-phone">Phone Number</label>
-                    <div className="login-input-wrap">
-                      <span className="login-input-icon">📱</span>
-                      <input
-                        id="reg-phone"
-                        type="tel"
-                        value={phone}
-                        onChange={e => setPhone(e.target.value)}
-                        placeholder="+91 9876543210"
-                      />
+                    </select>
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                      <MapPin className="w-4 h-4" />
                     </div>
                   </div>
-
-                  {/* Role-specific fields */}
-                  {(selectedRole === ROLES.VILLAGER || selectedRole === ROLES.PANCHAYAT) && (
-                    <div className="login-field-row">
-                      <div className="login-field">
-                        <label htmlFor="reg-village-name">Village Name</label>
-                        <div className="login-input-wrap">
-                          <span className="login-input-icon">🏘️</span>
-                          <input
-                            id="reg-village-name"
-                            type="text"
-                            value={villageName}
-                            onChange={e => setVillageName(e.target.value)}
-                            placeholder="e.g. Gosaba"
-                          />
-                        </div>
-                      </div>
-                      <div className="login-field">
-                        <label htmlFor="reg-district">District</label>
-                        <div className="login-input-wrap">
-                          <span className="login-input-icon">📍</span>
-                          <input
-                            id="reg-district"
-                            type="text"
-                            value={district}
-                            onChange={e => setDistrict(e.target.value)}
-                            placeholder="e.g. South 24 Parganas"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {selectedRole === ROLES.ASHA && (
-                    <div className="login-field-row">
-                      <div className="login-field">
-                        <label htmlFor="reg-asha-id">ASHA Worker ID</label>
-                        <div className="login-input-wrap">
-                          <span className="login-input-icon">🪪</span>
-                          <input
-                            id="reg-asha-id"
-                            type="text"
-                            value={ashaId}
-                            onChange={e => setAshaId(e.target.value)}
-                            placeholder="e.g. ASHA-071"
-                          />
-                        </div>
-                      </div>
-                      <div className="login-field">
-                        <label htmlFor="reg-village-name-asha">Village</label>
-                        <div className="login-input-wrap">
-                          <span className="login-input-icon">🏘️</span>
-                          <input
-                            id="reg-village-name-asha"
-                            type="text"
-                            value={villageName}
-                            onChange={e => setVillageName(e.target.value)}
-                            placeholder="e.g. Sagar Island"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {(selectedRole === ROLES.HYGIENE || selectedRole === ROLES.OFFICIAL || selectedRole === ROLES.ADMIN) && (
-                    <div className="login-field">
-                      <label htmlFor="reg-department">Department</label>
-                      <div className="login-input-wrap">
-                        <span className="login-input-icon">🏥</span>
-                        <input
-                          id="reg-department"
-                          type="text"
-                          value={department}
-                          onChange={e => setDepartment(e.target.value)}
-                          placeholder="e.g. Public Health & Hygiene Dept"
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  {error && <div className="login-error">{error}</div>}
-
-                  <div className="login-btn-row">
-                    <button
-                      type="button"
-                      className="login-back-btn"
-                      onClick={() => { setStep(1); setLocalError(''); }}
-                    >
-                      ← Back
-                    </button>
-                    <button
-                      id="reg-submit-btn"
-                      type="submit"
-                      className="login-cta-btn login-cta-flex"
-                      disabled={loading}
-                    >
-                      {loading ? <span className="login-spinner" /> : null}
-                      {loading ? 'Creating account…' : 'Create Account ✓'}
-                    </button>
-                  </div>
-                </form>
+                </div>
               )}
-            </>
-          )}
+
+              {/* Submit CTA */}
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full py-3 px-4 bg-sky-600 hover:bg-sky-700 disabled:opacity-50 text-white font-bold rounded-xl text-sm transition shadow-lg shadow-sky-600/30 flex items-center justify-center gap-2 cursor-pointer mt-2"
+              >
+                {isSubmitting ? (
+                  <span>Saving &amp; Authenticating...</span>
+                ) : (
+                  <>
+                    <span>Sign In to {selectedRoleObj.label}</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
+              </button>
+            </form>
+          </div>
+
+          {/* Footer note */}
+          <div className="bg-slate-50 px-6 py-3 border-t border-slate-200 text-center text-3xs text-slate-500">
+            Accounts are registered and stored directly into the NeerSense Realtime Database.
+          </div>
         </div>
-
-        {/* Footer note */}
-        <p className="login-footer-note">
-          Ministry of Jal Shakti · Ministry of Health & Family Welfare · SIH 2025
-        </p>
       </div>
-
-      <style>{`
-        /* ── Root & Background ── */
-        .neersense-login-root {
-          min-height: 100vh;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: #020b18;
-          font-family: 'Inter', 'Outfit', system-ui, sans-serif;
-          position: relative;
-          overflow: hidden;
-          padding: 2rem 1rem;
-        }
-        .login-bg {
-          position: fixed;
-          inset: 0;
-          pointer-events: none;
-          z-index: 0;
-        }
-        .login-blob {
-          position: absolute;
-          border-radius: 50%;
-          filter: blur(80px);
-          opacity: 0.35;
-          animation: blobPulse 8s ease-in-out infinite alternate;
-        }
-        .login-blob-1 {
-          width: 600px; height: 600px;
-          background: radial-gradient(circle, #0ea5e9, #2563eb);
-          top: -200px; left: -150px;
-          animation-delay: 0s;
-        }
-        .login-blob-2 {
-          width: 500px; height: 500px;
-          background: radial-gradient(circle, #06b6d4, #0369a1);
-          bottom: -200px; right: -100px;
-          animation-delay: 3s;
-        }
-        .login-blob-3 {
-          width: 350px; height: 350px;
-          background: radial-gradient(circle, #38bdf8, #7c3aed40);
-          top: 50%; left: 60%;
-          animation-delay: 5s;
-        }
-        .login-grid-overlay {
-          position: absolute;
-          inset: 0;
-          background-image:
-            linear-gradient(rgba(14, 165, 233, 0.06) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(14, 165, 233, 0.06) 1px, transparent 1px);
-          background-size: 40px 40px;
-        }
-        @keyframes blobPulse {
-          0% { transform: scale(1) translate(0, 0); }
-          100% { transform: scale(1.15) translate(30px, -20px); }
-        }
-
-        /* ── Layout ── */
-        .login-container {
-          position: relative;
-          z-index: 10;
-          width: 100%;
-          max-width: 480px;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 1.5rem;
-        }
-
-        /* ── Brand ── */
-        .login-brand {
-          display: flex;
-          align-items: center;
-          gap: 1rem;
-          animation: fadeSlideDown 0.6s ease both;
-        }
-        .login-logo-ring {
-          width: 56px; height: 56px;
-          border-radius: 50%;
-          background: linear-gradient(135deg, #0ea5e9, #2563eb);
-          display: flex; align-items: center; justify-content: center;
-          box-shadow: 0 0 30px rgba(14, 165, 233, 0.5);
-          animation: logoPulse 3s ease-in-out infinite;
-        }
-        .login-logo-drop { font-size: 1.6rem; }
-        .login-brand-name {
-          font-size: 1.8rem;
-          font-weight: 800;
-          background: linear-gradient(135deg, #38bdf8, #818cf8);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
-          margin: 0;
-        }
-        .login-brand-tagline {
-          color: #64748b;
-          font-size: 0.75rem;
-          margin: 0.1rem 0 0;
-          letter-spacing: 0.02em;
-        }
-        @keyframes logoPulse {
-          0%, 100% { box-shadow: 0 0 20px rgba(14,165,233,0.4); }
-          50% { box-shadow: 0 0 40px rgba(14,165,233,0.7); }
-        }
-
-        /* ── Card ── */
-        .login-card {
-          width: 100%;
-          background: rgba(15, 23, 42, 0.8);
-          border: 1px solid rgba(14, 165, 233, 0.2);
-          border-radius: 20px;
-          backdrop-filter: blur(20px);
-          -webkit-backdrop-filter: blur(20px);
-          box-shadow:
-            0 0 0 1px rgba(14,165,233,0.05),
-            0 25px 60px rgba(0,0,0,0.5),
-            inset 0 1px 0 rgba(255,255,255,0.05);
-          overflow: hidden;
-          animation: fadeSlideUp 0.6s ease both 0.15s;
-        }
-
-        /* ── Tabs ── */
-        .login-tabs {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          position: relative;
-          border-bottom: 1px solid rgba(14,165,233,0.15);
-        }
-        .login-tab {
-          padding: 1rem;
-          font-weight: 600;
-          font-size: 0.9rem;
-          color: #64748b;
-          background: none;
-          border: none;
-          cursor: pointer;
-          transition: color 0.25s;
-          position: relative;
-          z-index: 1;
-        }
-        .login-tab-active { color: #38bdf8; }
-        .login-tab-indicator {
-          position: absolute;
-          bottom: 0;
-          left: 0;
-          width: 50%;
-          height: 2px;
-          background: linear-gradient(90deg, #0ea5e9, #38bdf8);
-          transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          border-radius: 2px 2px 0 0;
-        }
-        .login-tab-indicator-right { transform: translateX(100%); }
-
-        /* ── Form ── */
-        .login-form {
-          padding: 1.75rem 1.75rem;
-          display: flex;
-          flex-direction: column;
-          gap: 1.1rem;
-        }
-        .login-form-title {
-          font-size: 1.25rem;
-          font-weight: 700;
-          color: #f1f5f9;
-          margin: 0;
-        }
-        .login-form-sub {
-          font-size: 0.8rem;
-          color: #64748b;
-          margin: -0.5rem 0 0;
-        }
-
-        /* ── Fields ── */
-        .login-field {
-          display: flex;
-          flex-direction: column;
-          gap: 0.4rem;
-          flex: 1;
-        }
-        .login-field label {
-          font-size: 0.78rem;
-          font-weight: 600;
-          color: #94a3b8;
-          text-transform: uppercase;
-          letter-spacing: 0.05em;
-        }
-        .login-input-wrap {
-          position: relative;
-          display: flex;
-          align-items: center;
-        }
-        .login-input-icon {
-          position: absolute;
-          left: 0.8rem;
-          font-size: 1rem;
-          pointer-events: none;
-          z-index: 1;
-        }
-        .login-input-wrap input {
-          width: 100%;
-          padding: 0.65rem 0.75rem 0.65rem 2.5rem;
-          background: rgba(30, 41, 59, 0.8);
-          border: 1px solid rgba(51, 65, 85, 0.8);
-          border-radius: 10px;
-          color: #f1f5f9;
-          font-size: 0.9rem;
-          outline: none;
-          transition: border-color 0.2s, box-shadow 0.2s;
-          font-family: inherit;
-        }
-        .login-input-wrap input:focus {
-          border-color: #0ea5e9;
-          box-shadow: 0 0 0 3px rgba(14,165,233,0.15);
-        }
-        .login-input-wrap input::placeholder { color: #475569; }
-        .login-eye-btn {
-          position: absolute;
-          right: 0.75rem;
-          background: none;
-          border: none;
-          cursor: pointer;
-          font-size: 1rem;
-          padding: 0;
-          line-height: 1;
-        }
-        .login-field-row {
-          display: flex;
-          gap: 0.75rem;
-        }
-
-        /* ── Role grid ── */
-        .login-role-grid {
-          display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          gap: 0.5rem;
-        }
-        .login-role-card {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 0.25rem;
-          padding: 0.6rem 0.4rem;
-          background: rgba(30, 41, 59, 0.6);
-          border: 1px solid rgba(51, 65, 85, 0.7);
-          border-radius: 10px;
-          cursor: pointer;
-          transition: all 0.2s;
-          font-family: inherit;
-        }
-        .login-role-card:hover {
-          border-color: rgba(14,165,233,0.5);
-          background: rgba(14,165,233,0.08);
-        }
-        .login-role-card-active {
-          border-color: #0ea5e9 !important;
-          background: rgba(14,165,233,0.15) !important;
-          box-shadow: 0 0 0 2px rgba(14,165,233,0.25);
-        }
-        .login-role-icon { font-size: 1.4rem; }
-        .login-role-label {
-          font-size: 0.65rem;
-          font-weight: 600;
-          color: #94a3b8;
-          text-align: center;
-          line-height: 1.2;
-        }
-        .login-role-card-active .login-role-label { color: #38bdf8; }
-        .login-role-desc {
-          font-size: 0.75rem;
-          color: #64748b;
-          margin: 0.25rem 0 0;
-          font-style: italic;
-        }
-
-        /* ── Buttons ── */
-        .login-cta-btn {
-          width: 100%;
-          padding: 0.8rem 1.5rem;
-          background: linear-gradient(135deg, #0284c7, #0ea5e9);
-          border: none;
-          border-radius: 10px;
-          color: white;
-          font-weight: 700;
-          font-size: 0.95rem;
-          cursor: pointer;
-          transition: all 0.2s;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 0.5rem;
-          box-shadow: 0 4px 15px rgba(14,165,233,0.3);
-          font-family: inherit;
-        }
-        .login-cta-btn:hover:not(:disabled) {
-          transform: translateY(-1px);
-          box-shadow: 0 6px 25px rgba(14,165,233,0.45);
-        }
-        .login-cta-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-        .login-cta-flex { flex: 1; width: auto; }
-        .login-back-btn {
-          padding: 0.8rem 1.2rem;
-          background: rgba(30,41,59,0.8);
-          border: 1px solid rgba(51,65,85,0.8);
-          border-radius: 10px;
-          color: #94a3b8;
-          font-weight: 600;
-          font-size: 0.9rem;
-          cursor: pointer;
-          transition: all 0.2s;
-          font-family: inherit;
-        }
-        .login-back-btn:hover {
-          background: rgba(51,65,85,0.8);
-          color: #f1f5f9;
-        }
-        .login-btn-row {
-          display: flex;
-          gap: 0.75rem;
-          align-items: center;
-        }
-
-        /* ── Error ── */
-        .login-error {
-          background: rgba(239, 68, 68, 0.1);
-          border: 1px solid rgba(239, 68, 68, 0.3);
-          border-radius: 8px;
-          padding: 0.65rem 0.9rem;
-          color: #fca5a5;
-          font-size: 0.82rem;
-          font-weight: 500;
-        }
-
-        /* ── Misc ── */
-        .login-spinner {
-          width: 16px; height: 16px;
-          border: 2px solid rgba(255,255,255,0.3);
-          border-top-color: white;
-          border-radius: 50%;
-          animation: spin 0.7s linear infinite;
-        }
-        .login-switch-text {
-          font-size: 0.82rem;
-          color: #64748b;
-          text-align: center;
-          margin: 0;
-        }
-        .login-link-btn {
-          background: none;
-          border: none;
-          color: #38bdf8;
-          font-weight: 600;
-          cursor: pointer;
-          font-size: inherit;
-          padding: 0;
-          font-family: inherit;
-          text-decoration: underline;
-        }
-
-        /* ── Step indicator ── */
-        .login-steps {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 0.5rem;
-          padding: 1rem 1.75rem 0;
-        }
-        .login-step {
-          display: flex;
-          align-items: center;
-          gap: 0.4rem;
-          color: #475569;
-          font-size: 0.78rem;
-          font-weight: 600;
-          transition: color 0.3s;
-        }
-        .login-step-active { color: #38bdf8; }
-        .login-step-num {
-          width: 22px; height: 22px;
-          border-radius: 50%;
-          background: rgba(51,65,85,0.8);
-          display: flex; align-items: center; justify-content: center;
-          font-size: 0.72rem;
-          font-weight: 700;
-          transition: background 0.3s, box-shadow 0.3s;
-        }
-        .login-step-active .login-step-num {
-          background: linear-gradient(135deg, #0284c7, #0ea5e9);
-          box-shadow: 0 0 10px rgba(14,165,233,0.4);
-        }
-        .login-step-line {
-          flex: 1;
-          max-width: 60px;
-          height: 2px;
-          background: rgba(51,65,85,0.8);
-          border-radius: 2px;
-        }
-
-        /* ── Footer ── */
-        .login-footer-note {
-          font-size: 0.7rem;
-          color: #334155;
-          text-align: center;
-          margin: 0;
-          animation: fadeSlideUp 0.6s ease both 0.4s;
-        }
-
-        /* ── Animations ── */
-        @keyframes fadeSlideDown {
-          from { opacity: 0; transform: translateY(-16px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes fadeSlideUp {
-          from { opacity: 0; transform: translateY(16px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
-
-        /* ── Responsive ── */
-        @media (max-width: 520px) {
-          .login-role-grid { grid-template-columns: repeat(2, 1fr); }
-          .login-field-row { flex-direction: column; }
-          .login-brand-name { font-size: 1.5rem; }
-        }
-      `}</style>
     </div>
   );
 }
