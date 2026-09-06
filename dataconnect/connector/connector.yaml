@@ -1,0 +1,5 @@
+connectorId: "neersense-connector"
+generate:
+  javascriptSdk:
+    outputDir: "../../src/dataconnect-generated"
+    package: "@neersense/dataconnect"

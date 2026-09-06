@@ -43,8 +43,17 @@ export default function Navbar() {
 
   const isVillagersPage = location.pathname.startsWith('/villagers') || (location.pathname === '/admin' && adminActivePage === 'villagers');
 
+  // When logged in as a specific role, Home nav link points to the user's portal
+  const homeNavPath = isGovernment
+    ? '/admin'
+    : activeRole === ROLES.ASHA
+    ? '/asha'
+    : activeRole === ROLES.HYGIENE
+    ? '/hygiene'
+    : '/';
+
   const allNavItems = [
-    { id: 'home', path: '/', label: 'Home', icon: Home, show: true },
+    { id: 'home', path: homeNavPath, label: 'Home', icon: Home, show: true },
     { id: 'villagers', path: '/villagers', label: 'Villagers Portal', icon: Users, show: isVillager || isGovernment },
     { id: 'asha', path: '/asha', label: 'ASHA Workers', icon: Activity, show: activeRole === ROLES.ASHA || isGovernment },
     { id: 'hygiene', path: '/hygiene', label: 'Hygiene & Water Safety', icon: BookOpen, show: activeRole === ROLES.HYGIENE || isGovernment },

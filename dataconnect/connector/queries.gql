@@ -1,0 +1,73 @@
+# NeerSense Firebase Data Connect Queries
+# Derived from user schema (@table directives for SQL Connect)
+
+query waterReports @auth(level: PUBLIC) {
+  waterReports {
+    id
+    recordedById
+    villageId
+    reportedAt
+    h2sResult
+    ph
+    turbidity
+    eColi
+    tds
+    do
+  }
+}
+
+query riskDashboards @auth(level: PUBLIC) {
+  riskDashboards {
+    id
+    villageId
+    riskScore
+    calculatedAt
+    alertLevel
+    statusNotes
+  }
+}
+
+query users @auth(level: PUBLIC) {
+  users {
+    role
+    id
+    assignedVillageId
+    preferredLanguage
+    contactNumber
+  }
+}
+
+query symptomCases @auth(level: PUBLIC) {
+  symptomCases {
+    id
+    reportedById
+    villageId
+    reportedAt
+    symptomList
+    urgencyLevel
+    triageStatus
+  }
+}
+
+query monsoonDatas @auth(level: PUBLIC) {
+  monsoonDatas {
+    id
+    villageId
+    recordedAt
+    rainfallIntensity
+    humidity
+  }
+}
+
+query villages @auth(level: PUBLIC) {
+  villages {
+    id
+    name
+    region
+    district
+    latitude
+    longitude
+    population
+    vulnerabilityIndex
+  }
+}

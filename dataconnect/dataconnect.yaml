@@ -1,0 +1,11 @@
+specVersion: "v1beta"
+serviceId: "neersense-service"
+location: "asia-south1"
+schema:
+  source: "./schema"
+  datasource:
+    postgresql:
+      database: "neersensedb"
+      cloudSql:
+        instanceId: "neersense-sql-instance"
+connectorDirs: ["./connector"]

@@ -205,6 +205,88 @@ const symptoms = {
   }
 };
 
+// ─── Sample ASHA Workers ──────────────────────────────────────────────────
+const Asha_Workers = {
+  'ASHA_071': {
+    profile: {
+      ashaId: 'ASHA-071',
+      ashaKey: 'ASHA_071',
+      ashaName: 'Kuni Majhi (ASHA-071)',
+      villageId: 'vil-02',
+      villageName: 'Sagar Island (Gangasagar)',
+      contactNumber: '+91 98765 43210',
+      role: 'ASHA',
+      updatedAt: Date.now()
+    },
+    waterReports: {
+      'wr-001': {
+        id: 'wr-001',
+        ashaKey: 'ASHA_071',
+        ashaName: 'Kuni Majhi (ASHA-071)',
+        villageId: 'vil-02',
+        villageName: 'Sagar Island (Gangasagar)',
+        sourceName: 'Main tube well near school',
+        sourceType: 'Tube Well / Handpump',
+        h2sResult: true,
+        h2sVialResult: 'BLACK_CONTAMINATED',
+        ph: 7.2,
+        turbidity: 4.5,
+        tds: 340,
+        bacterialCfu: 45,
+        safetyStatus: 'CONTAMINATED',
+        status: 'PENDING_CLASSIFICATION',
+        submittedBy: 'Kuni Majhi (ASHA-071)',
+        submissionRole: 'ASHA',
+        ashaFieldNotes: 'Black coloration appeared within 24 hours. Source: Main tube well near school.',
+        isApproved: false,
+        timestamp: new Date(Date.now() - 1800000).toISOString(),
+        updatedAt: Date.now() - 1800000
+      }
+    },
+    manualTests: {},
+    symptoms: {}
+  },
+  'ASHA_109': {
+    profile: {
+      ashaId: 'ASHA-109',
+      ashaKey: 'ASHA_109',
+      ashaName: 'Priyanka Mondal (ASHA-109)',
+      villageId: 'vil-01',
+      villageName: 'Gosaba Island (Rangabelia)',
+      contactNumber: '+91 98765 43211',
+      role: 'ASHA',
+      updatedAt: Date.now()
+    },
+    waterReports: {
+      'wr-002': {
+        id: 'wr-002',
+        ashaKey: 'ASHA_109',
+        ashaName: 'Priyanka Mondal (ASHA-109)',
+        villageId: 'vil-01',
+        villageName: 'Gosaba Island (Rangabelia)',
+        sourceName: 'Community pond sand filter outlet',
+        sourceType: 'Pond Sand Filter',
+        h2sResult: false,
+        h2sVialResult: 'YELLOW_SAFE',
+        ph: 7.0,
+        turbidity: 1.2,
+        tds: 210,
+        bacterialCfu: 0,
+        safetyStatus: 'SAFE',
+        status: 'APPROVED',
+        submittedBy: 'Priyanka Mondal (ASHA-109)',
+        submissionRole: 'ASHA',
+        ashaFieldNotes: 'No color change after 48 hours. Clear water.',
+        isApproved: true,
+        timestamp: new Date(Date.now() - 86400000).toISOString(),
+        updatedAt: Date.now() - 900000
+      }
+    },
+    manualTests: {},
+    symptoms: {}
+  }
+};
+
 // ─── Seed Function ──────────────────────────────────────────────────────────
 async function seedPath(path, data) {
   const res = await fetch(`${DB_URL}/${path}.json`, {
@@ -231,6 +313,7 @@ async function main() {
     await seedPath('alerts', alerts);
     await seedPath('waterReports', waterReports);
     await seedPath('symptoms', symptoms);
+    await seedPath('Asha_Workers', Asha_Workers);
 
     console.log('─'.repeat(50));
     console.log('🎉 All data seeded successfully!');

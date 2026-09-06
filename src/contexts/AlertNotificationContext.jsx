@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { api } from '../services/api';
+import { api, subscriptions } from '../services/api';
 import { speechService } from '../services/speechService';
 import { useLanguage } from './LanguageContext';
 
@@ -36,9 +36,35 @@ export const AlertNotificationProvider = ({ children }) => {
 
   useEffect(() => {
     fetchFullState();
-    const interval = setInterval(fetchFullState, 10000);
-    return () => clearInterval(interval);
+    // Poll every 10s when using REST; Firestore and RTDB use real-time listeners instead
+    const interval = (api.isUsingFirestore() || api.isUsingRtdb())
+      ? null
+      : setInterval(fetchFullState, 10000);
+    return () => { if (interval) clearInterval(interval); };
   }, [fetchFullState]);
+
+  // ─── Real-time subscriptions (active when RTDB or Firestore is configured) ──
+  useEffect(() => {
+    if (!api.isUsingFirestore() && !api.isUsingRtdb()) return;
+
+    const unsubWater = subscriptions.waterReports((reports) => {
+      if (Array.isArray(reports)) setWaterReports(reports);
+    });
+
+    const unsubSymptoms = subscriptions.symptoms((cases) => {
+      if (Array.isArray(cases)) setSymptoms(cases);
+    });
+
+    const unsubAlerts = subscriptions.riskDashboards((alts) => {
+      if (Array.isArray(alts)) setAlerts(alts);
+    });
+
+    return () => {
+      unsubWater();
+      unsubSymptoms();
+      unsubAlerts();
+    };
+  }, []);
 
   // ─── WebSocket for live sensor telemetry (local Express server) ──────────
   useEffect(() => {
