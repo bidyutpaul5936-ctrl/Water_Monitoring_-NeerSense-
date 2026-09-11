@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams, Link } from 'react-router-dom';
 import { 
   ShieldCheck, 
   Volume2, 
@@ -7,7 +8,8 @@ import {
   FileSpreadsheet, 
   HeartPulse, 
   ArrowRight, 
-  Droplets
+  Droplets,
+  Bell
 } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useOfflineSync } from '../../contexts/OfflineSyncContext';
@@ -23,9 +25,24 @@ import VillagerSymptomStatus from './VillagerSymptomStatus';
 export default function VillagersPage() {
   const { lang } = useLanguage();
   const { isOnline } = useOfflineSync();
-  const [activeTab, setActiveTab] = useState('home'); // 'home' (default), 'reports', 'treatment'
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab');
+  const [activeTab, setActiveTab] = useState(
+    tabParam && ['home', 'reports', 'treatment'].includes(tabParam) ? tabParam : 'home'
+  );
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [selectedSymptoms, setSelectedSymptoms] = useState([]);
+
+  useEffect(() => {
+    if (tabParam && ['home', 'reports', 'treatment'].includes(tabParam)) {
+      setActiveTab(tabParam);
+    }
+  }, [tabParam]);
+
+  const handleTabSelect = (tab) => {
+    setActiveTab(tab);
+    setSearchParams({ tab });
+  };
 
   const handlePlayAudioGuide = () => {
     if (isPlayingAudio) {
@@ -93,7 +110,7 @@ export default function VillagersPage() {
         <div className="flex items-center gap-2 mt-5 pt-3 border-t border-sky-200/70 overflow-x-auto">
           {/* Tab 1: Home (Default) */}
           <button
-            onClick={() => setActiveTab('home')}
+            onClick={() => handleTabSelect('home')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 shadow-sm ${
               activeTab === 'home'
                 ? 'bg-sky-700 text-white shadow-sky-200 ring-2 ring-sky-600'
@@ -107,7 +124,7 @@ export default function VillagersPage() {
 
           {/* Tab 2: Reports */}
           <button
-            onClick={() => setActiveTab('reports')}
+            onClick={() => handleTabSelect('reports')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 shadow-sm ${
               activeTab === 'reports'
                 ? 'bg-sky-700 text-white shadow-sky-200 ring-2 ring-sky-600'
@@ -120,7 +137,7 @@ export default function VillagersPage() {
 
           {/* Tab 3: Health Input & Instant Treatment */}
           <button
-            onClick={() => setActiveTab('treatment')}
+            onClick={() => handleTabSelect('treatment')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 shadow-sm ${
               activeTab === 'treatment'
                 ? 'bg-sky-700 text-white shadow-sky-200 ring-2 ring-sky-600'
@@ -135,6 +152,15 @@ export default function VillagersPage() {
               </span>
             )}
           </button>
+
+          {/* Action Link: Sign Up for Alerts */}
+          <Link
+            to="/villagers/signup"
+            className="ml-auto px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-300 whitespace-nowrap"
+          >
+            <Bell className="w-3.5 h-3.5 text-emerald-600" />
+            <span>Sign Up for Alerts</span>
+          </Link>
         </div>
       </div>
 
@@ -142,42 +168,60 @@ export default function VillagersPage() {
       {activeTab === 'home' && (
         <div className="space-y-6">
           {/* Quick Action Navigation Prompts */}
-          <div className="grid sm:grid-cols-2 gap-3.5">
+          <div className="grid sm:grid-cols-3 gap-3.5">
             <button
-              onClick={() => setActiveTab('reports')}
-              className="card p-4 hover:border-sky-400 transition text-left group bg-gradient-to-r from-sky-50/80 to-white flex items-center justify-between"
+              onClick={() => handleTabSelect('reports')}
+              className="card p-4 hover:border-sky-400 transition text-left group bg-gradient-to-r from-sky-50/80 to-white flex items-center justify-between cursor-pointer"
             >
               <div>
                 <div className="text-2xs font-bold text-sky-700 uppercase tracking-wide flex items-center gap-1">
                   <FileSpreadsheet className="w-3.5 h-3.5" /> Check Village Water
                 </div>
                 <div className="text-sm font-bold text-sky-950 mt-1">
-                  Search Water Quality Reports
+                  Search Water Reports
                 </div>
                 <div className="text-2xs text-slate-500 mt-0.5">
-                  Type your village name to see official laboratory test results
+                  View official laboratory test results
                 </div>
               </div>
-              <ArrowRight className="w-5 h-5 text-sky-600 group-hover:translate-x-1 transition" />
+              <ArrowRight className="w-4 h-4 text-sky-600 group-hover:translate-x-1 transition flex-shrink-0" />
             </button>
 
             <button
-              onClick={() => setActiveTab('treatment')}
-              className="card p-4 hover:border-sky-400 transition text-left group bg-gradient-to-r from-amber-50/50 via-sky-50/40 to-white flex items-center justify-between"
+              onClick={() => handleTabSelect('treatment')}
+              className="card p-4 hover:border-sky-400 transition text-left group bg-gradient-to-r from-amber-50/50 via-sky-50/40 to-white flex items-center justify-between cursor-pointer"
             >
               <div>
                 <div className="text-2xs font-bold text-amber-700 uppercase tracking-wide flex items-center gap-1">
                   <HeartPulse className="w-3.5 h-3.5 text-amber-600" /> Medical First-Aid
                 </div>
                 <div className="text-sm font-bold text-sky-950 mt-1">
-                  Symptom Checker & Treatment
+                  Symptom Checker
                 </div>
                 <div className="text-2xs text-slate-500 mt-0.5">
-                  Report symptoms and receive instant first-aid care instructions
+                  Receive instant first-aid instructions
                 </div>
               </div>
-              <ArrowRight className="w-5 h-5 text-sky-600 group-hover:translate-x-1 transition" />
+              <ArrowRight className="w-4 h-4 text-sky-600 group-hover:translate-x-1 transition flex-shrink-0" />
             </button>
+
+            <Link
+              to="/villagers/signup"
+              className="card p-4 hover:border-emerald-400 transition text-left group bg-gradient-to-r from-emerald-50/60 to-white flex items-center justify-between cursor-pointer"
+            >
+              <div>
+                <div className="text-2xs font-bold text-emerald-700 uppercase tracking-wide flex items-center gap-1">
+                  <Bell className="w-3.5 h-3.5 text-emerald-600" /> Free Notifications
+                </div>
+                <div className="text-sm font-bold text-slate-900 mt-1">
+                  Water Alert Sign Up
+                </div>
+                <div className="text-2xs text-slate-500 mt-0.5">
+                  Get SMS alerts on water contamination
+                </div>
+              </div>
+              <ArrowRight className="w-4 h-4 text-emerald-600 group-hover:translate-x-1 transition flex-shrink-0" />
+            </Link>
           </div>
 
           {/* 1. Slideshow showing basic steps for maintaining hygiene and clean water */}

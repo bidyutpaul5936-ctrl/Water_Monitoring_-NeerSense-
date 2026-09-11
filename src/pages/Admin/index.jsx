@@ -103,9 +103,9 @@ function AdminDashboardContent() {
               <span>Change PIN</span>
             </button>
             <button
-              onClick={() => { logout && logout(); navigate('/login'); }}
+              onClick={() => { logout && logout(); navigate('/admin/login'); }}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-red-700 bg-white border border-red-200 hover:bg-red-50 hover:border-red-400 rounded-lg transition shadow-2xs cursor-pointer"
-              title="Log out and return to login page"
+              title="Log out and return to admin login page"
             >
               <LogOut className="w-3.5 h-3.5 text-red-600" />
               <span>Log Out</span>

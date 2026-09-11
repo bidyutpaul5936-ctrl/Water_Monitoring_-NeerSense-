@@ -96,11 +96,11 @@ export default function HomePage() {
                 <span>Citizen Portal</span>
               </Link>
               <Link
-                to="/login"
+                to="/health/login"
                 className="inline-flex items-center gap-1.5 px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-xl text-xs transition shadow-xs"
               >
                 <LogIn className="w-3.5 h-3.5" />
-                <span>Department Staff Sign In</span>
+                <span>Health Staff Sign In</span>
               </Link>
             </div>
           </div>
