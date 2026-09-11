@@ -18,6 +18,8 @@ import {
 } from 'lucide-react';
 import { useAuthRole, ROLES, FIXED_CREDENTIALS } from '../../contexts/AuthRoleContext';
 import ChangePinModal from '../../components/ChangePinModal';
+import { ref, get } from 'firebase/database';
+import { rtdb } from '../../services/firebase';
 
 const HEALTH_ROLES = [
   {
@@ -57,6 +59,28 @@ export default function HealthLoginPage() {
   const [errorMessage, setErrorMessage] = useState('');
   const [showSetPinModal, setShowSetPinModal] = useState(false);
 
+  const [isUnregistered, setIsUnregistered] = useState(false);
+  const [dbStatus, setDbStatus] = useState('checking'); // 'checking' | 'connected' | 'offline'
+
+  // DB connectivity check
+  useEffect(() => {
+    let isMounted = true;
+    const checkDb = async () => {
+      if (!rtdb) {
+        if (isMounted) setDbStatus('offline');
+        return;
+      }
+      try {
+        await get(ref(rtdb, 'system/credentials/asha/phone'));
+        if (isMounted) setDbStatus('connected');
+      } catch {
+        if (isMounted) setDbStatus('offline');
+      }
+    };
+    checkDb();
+    return () => { isMounted = false; };
+  }, []);
+
   // Auto-fill role default credentials when toggling roles
   useEffect(() => {
     const fixedCred = FIXED_CREDENTIALS[selectedRole];
@@ -64,6 +88,7 @@ export default function HealthLoginPage() {
       setPhone(fixedCred.phone || '');
     }
     setErrorMessage('');
+    setIsUnregistered(false);
   }, [selectedRole]);
 
   const selectedRoleObj = HEALTH_ROLES.find(r => r.id === selectedRole) || HEALTH_ROLES[0];
@@ -71,6 +96,7 @@ export default function HealthLoginPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMessage('');
+    setIsUnregistered(false);
 
     const cleanPhone = phone.replace(/\D/g, '');
     if (cleanPhone.length < 10) {
@@ -101,6 +127,9 @@ export default function HealthLoginPage() {
           navigate('/hygiene');
         }
       } else {
+        if (result.isUnregistered) {
+          setIsUnregistered(true);
+        }
         setErrorMessage(result.message || 'Login failed. Please verify your credentials.');
       }
     } catch (err) {
@@ -135,6 +164,19 @@ export default function HealthLoginPage() {
 
           <div className="p-6 sm:p-8 space-y-6">
             
+            {/* Firebase Database Status Pill */}
+            <div className="flex items-center justify-center gap-2 py-1 px-3 rounded-full border text-3xs font-semibold mx-auto w-fit"
+              style={{
+                borderColor: dbStatus === 'connected' ? '#0284c744' : dbStatus === 'offline' ? '#ef444444' : '#0ea5e944',
+                background: dbStatus === 'connected' ? 'rgba(2,132,199,0.08)' : dbStatus === 'offline' ? 'rgba(239,68,68,0.10)' : 'rgba(14,165,233,0.08)',
+                color: dbStatus === 'connected' ? '#0369a1' : dbStatus === 'offline' ? '#dc2626' : '#0284c7',
+              }}>
+              <span className={`w-1.5 h-1.5 rounded-full inline-block ${dbStatus === 'connected' ? 'bg-sky-500 animate-pulse' : dbStatus === 'offline' ? 'bg-red-500' : 'bg-sky-400 animate-pulse'}`}></span>
+              <span>
+                {dbStatus === 'connected' ? 'Firebase Realtime Database Connected' : dbStatus === 'offline' ? 'Database Offline (Local fallback mode)' : 'Connecting to Database...'}
+              </span>
+            </div>
+
             {/* 1. ROLE CHOOSER: STRICTLY ASHA & HYGIENE ONLY */}
             <div>
               <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-2">
@@ -185,9 +227,29 @@ export default function HealthLoginPage() {
               <strong className="font-bold">{selectedRoleObj.label}:</strong> {selectedRoleObj.desc}
             </div>
 
+            {/* Unregistered Alert Banner */}
+            {isUnregistered && (
+              <div className="p-4 rounded-2xl bg-amber-50 border-2 border-amber-300 text-amber-900 space-y-2">
+                <div className="flex items-center gap-2 font-bold text-xs">
+                  <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                  <span>First-Time Registration Required</span>
+                </div>
+                <p className="text-2xs text-amber-800 leading-relaxed">
+                  Mobile number <strong>{phone}</strong> is not yet registered in the NeerSense health staff directory.
+                </p>
+                <Link
+                  to={`/health/signup?role=${selectedRole}`}
+                  className="inline-flex items-center gap-1 text-2xs font-black px-3 py-1.5 rounded-lg bg-amber-600 text-white hover:bg-amber-700 transition"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Register Account Now &rarr;</span>
+                </Link>
+              </div>
+            )}
+
             {/* 2. LOGIN FORM */}
             <form onSubmit={handleSubmit} className="space-y-4">
-              {errorMessage && (
+              {errorMessage && !isUnregistered && (
                 <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-xs text-red-800 flex items-center gap-2">
                   <AlertTriangle className="w-4 h-4 text-red-600 flex-shrink-0" />
                   <span>{errorMessage}</span>
