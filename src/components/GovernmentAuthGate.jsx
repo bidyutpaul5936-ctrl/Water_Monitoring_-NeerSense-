@@ -130,12 +130,20 @@ export default function GovernmentAuthGate({
         </button>
 
         <div className="pt-2 flex items-center justify-between text-2xs text-slate-500 border-t border-sky-100">
-          <Link to="/login" className="text-sky-700 hover:text-sky-900 font-semibold underline cursor-pointer">
-            Go to Login Page →
-          </Link>
-          <Link to="/first-time-signin" className="text-cyan-700 hover:text-cyan-900 font-semibold underline cursor-pointer">
-            First-Timer Sign In →
-          </Link>
+          {requiredRole === 'Government' ? (
+            <Link to="/admin/login" className="w-full text-center text-indigo-700 hover:text-indigo-900 font-bold underline cursor-pointer">
+              Go to District Admin / CDMO Command Login →
+            </Link>
+          ) : (
+            <>
+              <Link to={`/health/login?role=${requiredRole === 'ASHA' ? 'asha' : 'hygiene'}`} className="text-sky-700 hover:text-sky-900 font-semibold underline cursor-pointer">
+                Health Staff Login →
+              </Link>
+              <Link to={`/health/signup?role=${requiredRole === 'ASHA' ? 'asha' : 'hygiene'}`} className="text-teal-700 hover:text-teal-900 font-semibold underline cursor-pointer">
+                First-Timer Sign Up →
+              </Link>
+            </>
+          )}
         </div>
       </form>
     </div>

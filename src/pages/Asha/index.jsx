@@ -76,9 +76,9 @@ export function AshaDashboardContent() {
               Change PIN
             </button>
             <button
-              onClick={() => { logout(); navigate('/login'); }}
+              onClick={() => { logout(); navigate('/health/login'); }}
               className="flex items-center gap-1.5 px-3 py-1.5 text-2xs font-bold text-red-700 bg-white border border-red-200 hover:bg-red-50 hover:border-red-400 rounded-lg transition shadow-sm cursor-pointer"
-              title="Log out and return to login page"
+              title="Log out and return to health login page"
             >
               <LogOut className="w-3.5 h-3.5 text-red-600" />
               <span>Log Out</span>
