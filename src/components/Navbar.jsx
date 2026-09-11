@@ -17,24 +17,29 @@ import {
   Lock,
   ShieldCheck,
   LogOut,
-  TestTube2
+  TestTube2,
+  LogIn,
+  KeyRound,
+  Sparkles
 } from 'lucide-react';
 import { useAuthRole, ROLES } from '../contexts/AuthRoleContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useOfflineSync } from '../contexts/OfflineSyncContext';
 import { useAlertNotification } from '../contexts/AlertNotificationContext';
 import USSDSimulatorModal from './USSDSimulatorModal';
+import ChangePinModal from './ChangePinModal';
 
 export default function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { activeRole, currentUser, isGovernment, isAsha, isHygiene, isVillager, logout, setRole, adminActivePage = 'admin', setAdminActivePage } = useAuthRole();
-  const handleLogout = () => { logout(); navigate('/'); };
+  const { activeRole, currentUser, isGovernment, isAsha, isHygiene, isVillager, logout, adminActivePage = 'admin', setAdminActivePage } = useAuthRole();
+  const handleLogout = () => { logout(); navigate('/login'); };
   const { lang, setLang, languages } = useLanguage();
   const { isOnline, totalPending, isSyncing, syncNow } = useOfflineSync();
   const { waterReports } = useAlertNotification();
 
   const [showUssdModal, setShowUssdModal] = useState(false);
+  const [showChangePinModal, setShowChangePinModal] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -101,8 +106,16 @@ export default function Navbar() {
                 )}
               </span>
               <button
+                onClick={() => setShowChangePinModal(true)}
+                className="inline-flex items-center gap-1 text-2xs text-sky-200 hover:text-white bg-sky-800/80 hover:bg-sky-700 px-2 py-0.5 rounded border border-sky-700 transition cursor-pointer"
+                title="Change your login security PIN"
+              >
+                <KeyRound className="w-3 h-3 text-sky-300" />
+                <span>Change PIN</span>
+              </button>
+              <button
                 onClick={handleLogout}
-                className="inline-flex items-center gap-1 text-2xs text-amber-200 hover:text-white bg-sky-800/80 px-2 py-0.5 rounded border border-sky-700 transition cursor-pointer"
+                className="inline-flex items-center gap-1 text-2xs text-amber-200 hover:text-white bg-sky-800/80 hover:bg-sky-700 px-2 py-0.5 rounded border border-sky-700 transition cursor-pointer"
                 title="Log out of this dedicated department portal"
               >
                 <LogOut className="w-3 h-3" />
@@ -110,9 +123,24 @@ export default function Navbar() {
               </button>
             </div>
           ) : (
-            <span className="text-2xs text-sky-300 font-medium hidden sm:inline">
-              Public Portal
-            </span>
+            <div className="flex items-center gap-2">
+              <Link
+                to="/first-time-signin"
+                className="inline-flex items-center gap-1 text-2xs text-cyan-200 hover:text-white bg-sky-950/80 hover:bg-sky-800 px-2.5 py-0.5 rounded border border-cyan-400/40 font-semibold transition shadow-xs"
+                title="First-Time Personnel Onboarding & Sign In"
+              >
+                <Sparkles className="w-3 h-3 text-cyan-300" />
+                <span>First-Timer Sign In</span>
+              </Link>
+              <Link
+                to="/login"
+                className="inline-flex items-center gap-1 text-2xs text-white bg-sky-800 hover:bg-sky-700 px-2.5 py-0.5 rounded border border-sky-600 font-semibold transition shadow-xs"
+                title="Signed Personnel Login"
+              >
+                <LogIn className="w-3 h-3" />
+                <span>Personnel Login</span>
+              </Link>
+            </div>
           )}
 
           {isVillagersPage && (
@@ -127,7 +155,7 @@ export default function Navbar() {
       </div>
 
       {/* Main Navigation Bar */}
-      <header className="sticky top-0 z-40 bg-white border-b border-sky-200 shadow-sm">
+      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-sky-200/80 shadow-xs">
         <div className="max-w-screen-xl mx-auto px-4">
           <div className="flex items-center justify-between h-14">
 
@@ -283,6 +311,36 @@ export default function Navbar() {
                   </Link>
                 );
               })}
+              {activeRole === ROLES.VILLAGER && !isGovernment ? (
+                <div className="pt-2 border-t border-sky-100 space-y-2">
+                  <Link
+                    to="/first-time-signin"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-bold text-sky-900 bg-sky-100 hover:bg-sky-200 rounded-lg shadow-xs border border-sky-300"
+                  >
+                    <Sparkles className="w-4 h-4 text-sky-700" />
+                    <span>First-Timer Sign In / Register</span>
+                  </Link>
+                  <Link
+                    to="/login"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-bold text-white bg-sky-600 hover:bg-sky-700 rounded-lg shadow-xs"
+                  >
+                    <LogIn className="w-4 h-4" />
+                    <span>Signed Personnel Login</span>
+                  </Link>
+                </div>
+              ) : (
+                <div className="pt-2 border-t border-sky-100">
+                  <button
+                    onClick={() => { handleLogout(); setMobileMenuOpen(false); }}
+                    className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-bold text-red-700 bg-red-50 hover:bg-red-100 rounded-lg border border-red-200"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    <span>Log Out ({currentUser?.name || 'Staff'})</span>
+                  </button>
+                </div>
+              )}
               {isVillagersPage && (
                 <div className="pt-2 border-t border-sky-100">
                   <button
@@ -300,6 +358,7 @@ export default function Navbar() {
       </header>
 
       {showUssdModal && <USSDSimulatorModal isOpen={showUssdModal} onClose={() => setShowUssdModal(false)} />}
+      <ChangePinModal isOpen={showChangePinModal} onClose={() => setShowChangePinModal(false)} />
     </>
   );
 }

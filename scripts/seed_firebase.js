@@ -109,32 +109,34 @@ const villagesData = [
 
 const usersData = [
   {
-    id: 'usr-asha-01',
-    role: 'ASHA',
-    preferredLanguage: 'bn',
-    contactNumber: '+91 98310 11223',
-    assignedVillageId: 'vil-01',
+    id: 'usr-admin-01',
+    name: 'Dr. Suresh Mishra (CDMO)',
+    role: 'ADMIN',
+    preferredLanguage: 'en',
+    contactNumber: '9876543213',
+    pin: '1234',
+    department: 'Jal Shakti & Health Ministry',
+    assignedVillageId: null,
   },
   {
-    id: 'usr-asha-02',
+    id: 'usr-asha-01',
+    name: 'Kuni Majhi (ASHA-071)',
     role: 'ASHA',
     preferredLanguage: 'bn',
-    contactNumber: '+91 98310 44556',
-    assignedVillageId: 'vil-02',
+    contactNumber: '9876543211',
+    pin: '5678',
+    department: 'Community Health Surveillance',
+    assignedVillageId: 'vil-01',
   },
   {
     id: 'usr-hygiene-01',
-    role: 'HYGIENE_VOLUNTEER',
+    name: 'Dr. Meena Kumari (Hygiene Dept)',
+    role: 'HYGIENE',
     preferredLanguage: 'bn',
-    contactNumber: '+91 98310 77889',
+    contactNumber: '9876543212',
+    pin: '4321',
+    department: 'Hygiene & Lab Testing Dept',
     assignedVillageId: 'vil-01',
-  },
-  {
-    id: 'usr-govt-01',
-    role: 'GOVERNMENT',
-    preferredLanguage: 'en',
-    contactNumber: '+91 33 2214 5555',
-    assignedVillageId: null,
   }
 ];
 
