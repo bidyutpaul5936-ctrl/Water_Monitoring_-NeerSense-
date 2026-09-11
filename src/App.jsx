@@ -9,8 +9,9 @@ import { AlterationPermissionProvider } from './contexts/AlterationPermissionCon
 import Navbar from './components/Navbar';
 import NotificationToast from './components/NotificationToast';
 
-// Auth page
+// Auth pages
 import LoginPage from './pages/Auth/LoginPage';
+import FirstTimeSignInPage from './pages/Auth/FirstTimeSignInPage';
 
 // Portal page components
 import HomePage from './pages/Home';
@@ -20,46 +21,32 @@ import HygienePage from './pages/Hygiene';
 import AdminPage from './pages/Admin';
 
 function MainLayout() {
-  const { isAuthenticated, activeRole, isGovernment, isAsha, isHygiene, isVillager } = useAuthRole();
+  const { isAuthenticated, isGovernment, isAsha, isHygiene, isVillager } = useAuthRole();
 
-  // 1. If not logged in, show the Login Portal immediately
-  if (!isAuthenticated) {
-    return <LoginPage />;
-  }
-
-  // 2. Once logged in, show the Home page & dedicated role portal (with no cross-portal links)
   return (
     <div className="min-h-screen bg-sky-50 text-slate-800 flex flex-col font-sans">
       <Navbar />
 
       <main className="flex-1 pb-10">
         <Routes>
-          {/* Home Page */}
+          {/* Public Home Page with Live Status & Overview */}
           <Route path="/" element={<HomePage />} />
 
-          {/* Dedicated Villagers Portal (accessible only to villagers) */}
-          <Route
-            path="/villagers"
-            element={isVillager ? <VillagersPage /> : <Navigate to="/" replace />}
-          />
+          {/* Dedicated Login Portal for Signed Personnels */}
+          <Route path="/login" element={<LoginPage />} />
 
-          {/* Dedicated ASHA Portal (accessible only to ASHA workers) */}
-          <Route
-            path="/asha"
-            element={isAsha ? <AshaPage /> : <Navigate to="/" replace />}
-          />
+          {/* First-Time Personnel Onboarding & Sign In */}
+          <Route path="/first-time-signin" element={<FirstTimeSignInPage />} />
+          <Route path="/register" element={<FirstTimeSignInPage />} />
+          <Route path="/signup" element={<FirstTimeSignInPage />} />
 
-          {/* Dedicated Hygiene Portal (accessible only to Hygiene Dept) */}
-          <Route
-            path="/hygiene"
-            element={isHygiene ? <HygienePage /> : <Navigate to="/" replace />}
-          />
+          {/* Villagers & Citizens Water Safety Portal (Public) */}
+          <Route path="/villagers" element={<VillagersPage />} />
 
-          {/* Dedicated Admin Portal (accessible only to Government Officials) */}
-          <Route
-            path="/admin"
-            element={isGovernment ? <AdminPage /> : <Navigate to="/" replace />}
-          />
+          {/* Department Portals (Protected by GovernmentAuthGate) */}
+          <Route path="/asha" element={<AshaPage />} />
+          <Route path="/hygiene" element={<HygienePage />} />
+          <Route path="/admin" element={<AdminPage />} />
 
           {/* All other routes fallback to Home */}
           <Route path="*" element={<Navigate to="/" replace />} />
@@ -68,7 +55,7 @@ function MainLayout() {
 
       <NotificationToast />
 
-      <footer className="border-t border-sky-200 bg-white py-4 text-xs text-slate-600">
+      <footer className="border-t border-sky-200 bg-white/95 backdrop-blur-sm py-4 text-xs text-slate-600">
         <div className="max-w-screen-xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
           <div className="flex items-center gap-1.5 font-medium">
             <strong className="text-sky-950">NeerSense</strong>

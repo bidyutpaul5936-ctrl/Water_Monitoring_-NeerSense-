@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { Activity, FlaskConical, FileText, Stethoscope, TestTube2, ShieldCheck } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Activity, FlaskConical, FileText, Stethoscope, TestTube2, ShieldCheck, KeyRound, LogOut } from 'lucide-react';
 import { useAuthRole } from '../../contexts/AuthRoleContext';
 import { useAlertNotification } from '../../contexts/AlertNotificationContext';
 import GovernmentAuthGate from '../../components/GovernmentAuthGate';
 import { AlterationModeBanner } from '../../contexts/AlterationPermissionContext';
+import ChangePinModal from '../../components/ChangePinModal';
 
 import AshaWaterDataEntryForm from './AshaWaterDataEntryForm';
 import AshaSubmittedReportsList from './AshaSubmittedReportsList';
@@ -11,10 +13,12 @@ import PatientCasesFeed from './PatientCasesFeed';
 import H2SFieldTestLogger from './H2SFieldTestLogger';
 
 export function AshaDashboardContent() {
-  const { isGovernment, currentUser = {} } = useAuthRole() || {};
+  const navigate = useNavigate();
+  const { isGovernment, currentUser = {}, logout } = useAuthRole() || {};
   const { symptoms = [], waterReports = [] } = useAlertNotification() || {};
-  const [activeTab, setActiveTab] = useState('dataEntry'); // 'dataEntry', 'myReports', 'cases', 'h2sGuide'
-  const [retestReport, setRetestReport] = useState(null); // pre-fill data for re-test
+  const [activeTab, setActiveTab] = useState('dataEntry');
+  const [retestReport, setRetestReport] = useState(null);
+  const [showChangePinModal, setShowChangePinModal] = useState(false);
 
   const handleRetestRequest = (report) => {
     setRetestReport(report);
@@ -63,6 +67,22 @@ export function AshaDashboardContent() {
             <span className="badge badge-blue">
               {safeSymptoms.length} Patient Case(s) in Triage
             </span>
+            <button
+              onClick={() => setShowChangePinModal(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-2xs font-bold text-sky-800 bg-white border border-sky-300 hover:bg-sky-50 hover:border-sky-500 rounded-lg transition shadow-sm cursor-pointer"
+              title="Change your login PIN"
+            >
+              <KeyRound className="w-3.5 h-3.5 text-sky-600" />
+              Change PIN
+            </button>
+            <button
+              onClick={() => { logout(); navigate('/login'); }}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-2xs font-bold text-red-700 bg-white border border-red-200 hover:bg-red-50 hover:border-red-400 rounded-lg transition shadow-sm cursor-pointer"
+              title="Log out and return to login page"
+            >
+              <LogOut className="w-3.5 h-3.5 text-red-600" />
+              <span>Log Out</span>
+            </button>
           </div>
         </div>
       </div>
@@ -133,6 +153,9 @@ export function AshaDashboardContent() {
         {activeTab === 'cases' && <PatientCasesFeed />}
         {activeTab === 'h2sGuide' && <H2SFieldTestLogger />}
       </div>
+
+      {/* Change PIN Modal */}
+      <ChangePinModal isOpen={showChangePinModal} onClose={() => setShowChangePinModal(false)} />
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   FlaskConical, 
   CheckCircle2, 
@@ -17,7 +17,11 @@ import {
   KeyRound,
   Lock,
   Unlock,
-  ShieldCheck
+  ShieldCheck,
+  Brain,
+  TrendingUp,
+  Zap,
+  RefreshCw
 } from 'lucide-react';
 import { useAuthRole } from '../../contexts/AuthRoleContext';
 import { useAlertNotification } from '../../contexts/AlertNotificationContext';
@@ -45,6 +49,10 @@ export default function HygieneClassificationDesk() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState(null);
 
+  // AI / ML Risk Assessment Engine State
+  const [mlLoading, setMlLoading] = useState(false);
+  const [mlResult, setMlResult] = useState(null);
+
   // Group reports
   const pendingReports = waterReports.filter(r => r.status === 'PENDING_CLASSIFICATION' || (!r.status && !r.isApproved));
   const classifiedReports = waterReports.filter(r => r.status === 'PENDING_APPROVAL');
@@ -58,6 +66,46 @@ export default function HygieneClassificationDesk() {
 
   // Selected report
   const selectedReport = waterReports.find(r => r.id === selectedReportId) || (displayedReports.length > 0 ? displayedReports[0] : null);
+
+  // Fetch ML Assessment when selected report changes
+  useEffect(() => {
+    if (!selectedReport) {
+      setMlResult(null);
+      return;
+    }
+    let isCancelled = false;
+    setMlLoading(true);
+
+    api.getMlRiskAssessment({
+      villageId: selectedReport.villageId,
+      ph: selectedReport.ph,
+      turbidity: selectedReport.turbidity,
+      bacterialCfu: selectedReport.bacterialCfu,
+      h2sVialResult: selectedReport.h2sVialResult === 'BLACK_CONTAMINATED' ? 'BLACK_POSITIVE' : 'NEGATIVE',
+      tds: selectedReport.tds,
+      sourceType: selectedReport.sourceType
+    }).then((res) => {
+      if (!isCancelled && res?.success) {
+        setMlResult(res);
+      }
+    }).catch((err) => {
+      console.warn('[HygieneDesk] ML assessment error:', err);
+    }).finally(() => {
+      if (!isCancelled) setMlLoading(false);
+    });
+
+    return () => { isCancelled = true; };
+  }, [selectedReport?.id, selectedReport?.ph, selectedReport?.turbidity, selectedReport?.h2sVialResult]);
+
+  const applyMlRecommendation = () => {
+    if (!mlResult) return;
+    if (mlResult.suggestedClassification) {
+      setSelectedSafety(mlResult.suggestedClassification);
+    }
+    if (mlResult.advisory) {
+      setAdvisoryText(mlResult.advisory);
+    }
+  };
 
   const handleSelectReport = (report) => {
     setSelectedReportId(report.id);
@@ -466,6 +514,119 @@ export default function HygieneClassificationDesk() {
                     </div>
                   </div>
                 </div>
+              </div>
+
+              {/* ─── AI/ML Outbreak Prediction Intelligence Card ──────────────── */}
+              <div className="rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-50/70 via-white to-sky-50/50 p-4 space-y-3.5 shadow-xs">
+                <div className="flex items-center justify-between gap-2 border-b border-indigo-100 pb-2.5">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center shadow-xs">
+                      <Brain className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-black text-indigo-950 flex items-center gap-1.5">
+                        <span>AI/ML Outbreak Hazard Engine</span>
+                        <span className="text-3xs font-extrabold uppercase px-1.5 py-0.2 rounded bg-indigo-100 text-indigo-700 border border-indigo-200">
+                          Predictive Model
+                        </span>
+                      </div>
+                      <div className="text-3xs text-slate-500">
+                        Evaluates microbial CFU, turbidity, pH, and local symptom clustering
+                      </div>
+                    </div>
+                  </div>
+
+                  {mlLoading ? (
+                    <div className="flex items-center gap-1 text-3xs text-indigo-600 font-bold">
+                      <RefreshCw className="w-3 h-3 animate-spin" />
+                      <span>Computing...</span>
+                    </div>
+                  ) : mlResult ? (
+                    <div className="flex items-center gap-1.5">
+                      <span className={`text-3xs font-black px-2 py-0.5 rounded-full border ${
+                        mlResult.riskLevel === 'CRITICAL'
+                          ? 'bg-red-100 text-red-800 border-red-200'
+                          : mlResult.riskLevel === 'MODERATE'
+                          ? 'bg-amber-100 text-amber-800 border-amber-200'
+                          : 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                      }`}>
+                        {mlResult.riskLevel} RISK ({mlResult.hazardScore}/100)
+                      </span>
+                    </div>
+                  ) : null}
+                </div>
+
+                {mlResult && (
+                  <div className="space-y-3">
+                    {/* Hazard Meter Bar */}
+                    <div>
+                      <div className="flex items-center justify-between text-3xs font-bold mb-1">
+                        <span className="text-slate-700">Water Hazard & Pathogen Index</span>
+                        <span className={
+                          mlResult.hazardScore >= 70 ? 'text-red-700 font-black' :
+                          mlResult.hazardScore >= 45 ? 'text-amber-700 font-black' :
+                          'text-emerald-700 font-black'
+                        }>
+                          {mlResult.hazardScore}% Severity
+                        </span>
+                      </div>
+                      <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full transition-all duration-700 rounded-full ${
+                            mlResult.hazardScore >= 70 ? 'bg-gradient-to-r from-amber-500 to-red-600' :
+                            mlResult.hazardScore >= 45 ? 'bg-gradient-to-r from-yellow-400 to-amber-500' :
+                            'bg-gradient-to-r from-teal-400 to-emerald-500'
+                          }`}
+                          style={{ width: `${Math.min(100, Math.max(8, mlResult.hazardScore))}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Contributing Factor Indicators */}
+                    {mlResult.factors && (
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        {mlResult.factors.map((f, idx) => (
+                          <div key={idx} className="p-2 rounded-lg bg-white/90 border border-slate-200/80 space-y-0.5 text-left">
+                            <div className="flex items-center justify-between">
+                              <span className="text-3xs font-bold text-slate-800 truncate">{f.name}</span>
+                              <span className={`text-4xs font-black px-1 py-0.2 rounded ${
+                                f.status === 'CRITICAL' ? 'bg-red-100 text-red-700' :
+                                f.status === 'WARNING' ? 'bg-amber-100 text-amber-700' :
+                                'bg-emerald-100 text-emerald-700'
+                              }`}>
+                                {f.status}
+                              </span>
+                            </div>
+                            <p className="text-3xs text-slate-500 line-clamp-1">{f.description}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* AI Advisory Recommendation Box & Auto-apply button */}
+                    <div className="p-2.5 rounded-xl bg-indigo-500/10 border border-indigo-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                      <div className="space-y-0.5 text-left">
+                        <div className="text-3xs font-black text-indigo-950 uppercase tracking-wider flex items-center gap-1">
+                          <Sparkles className="w-3 h-3 text-indigo-600" />
+                          <span>AI Recommended Action: Classify as {mlResult.suggestedClassification}</span>
+                        </div>
+                        <p className="text-2xs text-indigo-900 font-medium leading-tight">
+                          "{mlResult.advisory}"
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={applyMlRecommendation}
+                        className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-2xs flex items-center justify-center gap-1 transition shadow-xs flex-shrink-0 cursor-pointer"
+                        title="Auto-fill classification and advisory based on AI analysis"
+                      >
+                        <Zap className="w-3 h-3 text-amber-300" />
+                        <span>Apply AI Advisory</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Classification Action Form */}

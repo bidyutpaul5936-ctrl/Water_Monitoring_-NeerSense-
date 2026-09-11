@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { ShieldCheck, Lock, ArrowLeft, Unlock } from 'lucide-react';
-import { useAuthRole } from '../contexts/AuthRoleContext';
+import { Link } from 'react-router-dom';
+import { ShieldCheck, Lock, Unlock } from 'lucide-react';
+import { useAuthRole, ROLES, FIXED_CREDENTIALS } from '../contexts/AuthRoleContext';
 
 /**
  * GovernmentAuthGate
  *
  * PIN-based access gate for restricted portals.
- * Users enter a PIN to switch into the required role.
+ * Validates against FIXED_CREDENTIALS.
  *
  * Props:
  *   title        – heading text
@@ -19,9 +20,11 @@ export default function GovernmentAuthGate({
   children,
   onAuthorized,
 }) {
-  const { isGovernment, isAsha, isHygiene, loginAsGovernment, loginAsAsha, loginAsHygiene } = useAuthRole();
+  const { isGovernment, isAsha, isHygiene, loginWithPhone } = useAuthRole();
+  const [phone, setPhone] = useState('');
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Determine if the current user is allowed
   const isAllowed =
@@ -44,25 +47,38 @@ export default function GovernmentAuthGate({
       ? 'Water & Sanitation Officer'
       : 'District Health Official / Admin';
 
-  const handleSubmit = (e) => {
+  const roleKey =
+    requiredRole === 'ASHA'
+      ? ROLES.ASHA
+      : requiredRole === 'HYGIENE'
+      ? ROLES.HYGIENE
+      : ROLES.OFFICIAL;
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    let result;
-    if (requiredRole === 'ASHA') {
-      result = loginAsAsha(pin);
-    } else if (requiredRole === 'HYGIENE') {
-      result = loginAsHygiene(pin);
-    } else {
-      result = loginAsGovernment(pin);
-    }
-    if (!result.success) {
-      setError(result.message || 'Incorrect PIN. Please try again.');
+    setIsSubmitting(true);
+
+    try {
+      const result = await loginWithPhone({
+        phone: phone || FIXED_CREDENTIALS[roleKey]?.phone || '',
+        pin,
+        role: roleKey,
+        name: FIXED_CREDENTIALS[roleKey]?.name || roleLabel,
+      });
+      if (!result.success) {
+        setError(result.message || 'Incorrect credentials. Please try again.');
+      }
+    } catch (err) {
+      setError(err.message || 'Authentication failed.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="max-w-md mx-auto my-12 p-6 bg-white rounded-2xl border-2 border-sky-300 shadow-xl text-center space-y-5">
-      <div className="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br from-sky-600 to-sky-800 flex items-center justify-center text-white shadow-md">
+    <div className="max-w-md mx-auto my-12 p-6 bg-white/95 backdrop-blur-xl rounded-2xl border-2 border-sky-300 shadow-2xl shadow-sky-200/30 text-center space-y-5">
+      <div className="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br from-sky-500 to-cyan-600 flex items-center justify-center text-white shadow-lg shadow-sky-500/30">
         <Lock className="w-7 h-7" />
       </div>
 
@@ -86,39 +102,40 @@ export default function GovernmentAuthGate({
 
       <form onSubmit={handleSubmit} className="space-y-3">
         <input
+          type="tel"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
+          placeholder="Enter phone number"
+          maxLength={10}
+          className="w-full px-4 py-2.5 border-2 border-sky-200 rounded-lg text-center text-sm font-mono tracking-widest focus:outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-200 transition"
+        />
+        <input
           type="password"
           value={pin}
           onChange={(e) => setPin(e.target.value)}
-          placeholder={`Enter Access PIN (${requiredRole === 'ASHA' ? '5678' : requiredRole === 'HYGIENE' ? '4321' : '1234'})`}
+          placeholder="Enter security PIN"
           className="w-full px-4 py-2.5 border-2 border-sky-200 rounded-lg text-center text-sm font-mono tracking-widest focus:outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-200 transition"
           autoFocus
         />
         {error && (
-          <p className="text-xs text-red-600 font-semibold">{error}</p>
+          <p className="text-xs text-red-600 font-semibold bg-red-50 px-3 py-2 rounded-lg border border-red-200">{error}</p>
         )}
         <button
           type="submit"
-          className="w-full py-2.5 px-4 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-lg transition shadow flex items-center justify-center gap-2 text-xs"
+          disabled={isSubmitting}
+          className="w-full py-2.5 px-4 bg-gradient-to-r from-sky-600 to-cyan-600 hover:from-sky-700 hover:to-cyan-700 text-white font-bold rounded-lg transition-all shadow-lg shadow-sky-600/25 flex items-center justify-center gap-2 text-xs disabled:opacity-50 active:scale-[0.98]"
         >
           <Unlock className="w-4 h-4" />
-          <span>Verify & Access Portal</span>
+          <span>{isSubmitting ? 'Verifying...' : 'Verify & Access Portal'}</span>
         </button>
 
-        {/* Quick Demo Access Button */}
-        <div className="pt-2">
-          <button
-            type="button"
-            onClick={() => {
-              const defaultPin = requiredRole === 'ASHA' ? '5678' : requiredRole === 'HYGIENE' ? '4321' : '1234';
-              setPin(defaultPin);
-              if (requiredRole === 'ASHA') loginAsAsha(defaultPin);
-              else if (requiredRole === 'HYGIENE') loginAsHygiene(defaultPin);
-              else loginAsGovernment(defaultPin);
-            }}
-            className="w-full py-2 px-3 bg-sky-50 hover:bg-sky-100 text-sky-800 border border-sky-200 font-semibold rounded-lg text-xs transition"
-          >
-            ⚡ Quick Demo Access (PIN: {requiredRole === 'ASHA' ? '5678' : requiredRole === 'HYGIENE' ? '4321' : '1234'})
-          </button>
+        <div className="pt-2 flex items-center justify-between text-2xs text-slate-500 border-t border-sky-100">
+          <Link to="/login" className="text-sky-700 hover:text-sky-900 font-semibold underline cursor-pointer">
+            Go to Login Page →
+          </Link>
+          <Link to="/first-time-signin" className="text-cyan-700 hover:text-cyan-900 font-semibold underline cursor-pointer">
+            First-Timer Sign In →
+          </Link>
         </div>
       </form>
     </div>

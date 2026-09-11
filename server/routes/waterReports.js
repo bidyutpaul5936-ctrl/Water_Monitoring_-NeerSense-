@@ -110,8 +110,8 @@ router.post('/', (req, res) => {
   res.json({ success: true, report: newReport, totalReports: state.waterReports.length });
 });
 
-// PATCH /api/water-reports/:id/classify - Hygiene Dept classifies safety status and advisory
-router.patch('/:id/classify', (req, res) => {
+// Classify Handler (Hygiene Dept)
+const handleClassify = (req, res) => {
   const { safetyStatus, advisory, classifiedBy, notes } = req.body || {};
   const reportIndex = state.waterReports.findIndex(r => r.id === req.params.id);
 
@@ -134,10 +134,13 @@ router.patch('/:id/classify', (req, res) => {
   broadcastWs('WATER_REPORTS_UPDATE', state.waterReports);
 
   res.json({ success: true, report });
-});
+};
 
-// PATCH /api/water-reports/:id/verify - Government verifies and approves the report
-router.patch('/:id/verify', (req, res) => {
+router.patch('/:id/classify', handleClassify);
+router.post('/:id/classify', handleClassify);
+
+// Verify Handler (Government Admin)
+const handleVerify = (req, res) => {
   const { verifiedBy, advisory, remarks, safetyStatus } = req.body || {};
   const reportIndex = state.waterReports.findIndex(r => r.id === req.params.id);
 
@@ -177,10 +180,13 @@ router.patch('/:id/verify', (req, res) => {
   broadcastWs('WATER_REPORTS_UPDATE', state.waterReports);
 
   res.json({ success: true, report });
-});
+};
 
-// PATCH /api/water-reports/:id/reject - Government requests re-test / rejects report
-router.patch('/:id/reject', (req, res) => {
+router.patch('/:id/verify', handleVerify);
+router.post('/:id/verify', handleVerify);
+
+// Reject Handler
+const handleReject = (req, res) => {
   const { reason, rejectedBy } = req.body || {};
   const reportIndex = state.waterReports.findIndex(r => r.id === req.params.id);
 
@@ -191,14 +197,17 @@ router.patch('/:id/reject', (req, res) => {
   const report = state.waterReports[reportIndex];
   report.status = 'REJECTED';
   report.isApproved = false;
-  report.rejectionReason = reason || 'Field readings inconsistent with standard protocol. Resampling required.';
-  report.rejectedBy = rejectedBy || 'District Surveillance Officer';
+  report.rejectionReason = reason || 'Government Health Authority requested re-testing.';
+  report.rejectedBy = rejectedBy || 'Dr. Suresh Mishra, CDMO';
   report.rejectedAt = new Date().toISOString();
 
   broadcastWs('WATER_REPORTS_UPDATE', state.waterReports);
 
   res.json({ success: true, report });
-});
+};
+
+router.patch('/:id/reject', handleReject);
+router.post('/:id/reject', handleReject);
 
 // PUT /api/water-reports/:id/alter - Admin alters report data with permission
 router.put('/:id/alter', (req, res) => {

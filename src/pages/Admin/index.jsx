@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { Building2, ShieldCheck, CheckCircle2, FileCheck, Activity, Database, BookOpen, Users, Home, PieChart } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Building2, ShieldCheck, CheckCircle2, FileCheck, Activity, Database, BookOpen, Users, Home, PieChart, KeyRound, LogOut } from 'lucide-react';
 import { useAuthRole } from '../../contexts/AuthRoleContext';
 import { useAlertNotification } from '../../contexts/AlertNotificationContext';
 import { api } from '../../services/api';
 import { seedNeerSenseData } from '../../services/seedData';
 import GovernmentAuthGate from '../../components/GovernmentAuthGate';
+import ChangePinModal from '../../components/ChangePinModal';
 
 import GovtReportVerificationDesk from './GovtReportVerificationDesk';
 import CommunitySurveillanceFeed from './CommunitySurveillanceFeed';
@@ -19,10 +21,12 @@ import VillagersPage from '../Villagers';
 import HomePage from '../Home';
 
 function AdminDashboardContent() {
-  const { adminActivePage = 'admin', setAdminActivePage } = useAuthRole() || {};
+  const navigate = useNavigate();
+  const { adminActivePage = 'admin', setAdminActivePage, logout } = useAuthRole() || {};
   const { waterReports = [], symptoms = [], refreshData = () => {} } = useAlertNotification() || {};
   const [adminTab, setAdminTab] = useState('verification'); // 'verification', 'surveillance', 'directLab', 'controls'
   const [toastMessage, setToastMessage] = useState(null);
+  const [showChangePinModal, setShowChangePinModal] = useState(false);
 
   const safeWaterReports = Array.isArray(waterReports) ? waterReports : [];
   const safeSymptoms = Array.isArray(symptoms) ? symptoms : [];
@@ -79,7 +83,7 @@ function AdminDashboardContent() {
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <SystemControlToolbar onClearAll={handleClearAll} />
             <button
               onClick={handleSeedData}
@@ -89,6 +93,22 @@ function AdminDashboardContent() {
             >
               <Database className="w-3.5 h-3.5" />
               {seeding ? 'Loading…' : '🌱 Load Sample Data'}
+            </button>
+            <button
+              onClick={() => setShowChangePinModal(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-sky-800 bg-white border border-sky-300 rounded-lg hover:bg-sky-50 transition shadow-2xs cursor-pointer"
+              title="Change your Admin security PIN"
+            >
+              <KeyRound className="w-3.5 h-3.5 text-sky-600" />
+              <span>Change PIN</span>
+            </button>
+            <button
+              onClick={() => { logout && logout(); navigate('/login'); }}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-red-700 bg-white border border-red-200 hover:bg-red-50 hover:border-red-400 rounded-lg transition shadow-2xs cursor-pointer"
+              title="Log out and return to login page"
+            >
+              <LogOut className="w-3.5 h-3.5 text-red-600" />
+              <span>Log Out</span>
             </button>
           </div>
         </div>
@@ -257,6 +277,12 @@ function AdminDashboardContent() {
           </div>
         </div>
       )}
+
+      {/* Change Security PIN Modal */}
+      <ChangePinModal
+        isOpen={showChangePinModal}
+        onClose={() => setShowChangePinModal(false)}
+      />
     </div>
   );
 }
