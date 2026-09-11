@@ -19,6 +19,17 @@ import ChangePinModal from '../../components/ChangePinModal';
 import { ref, get } from 'firebase/database';
 import { rtdb } from '../../services/firebase';
 
+// Is Firebase actually reachable? Quick connectivity check
+async function checkDbReachable() {
+  if (!rtdb) return false;
+  try {
+    await get(ref(rtdb, 'system/credentials/admin/phone'));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export default function AdminLoginPage() {
   const navigate = useNavigate();
   const { loginWithPhone, forceReleaseAdminLock } = useAuthRole();
@@ -35,23 +46,36 @@ export default function AdminLoginPage() {
   const [activeAdminName, setActiveAdminName] = useState('');
   const [isUnlocking, setIsUnlocking] = useState(false);
 
-  // Check on load if an admin session is actively running
+  // Firebase RTDB connectivity status
+  const [dbStatus, setDbStatus] = useState('checking'); // 'checking' | 'connected' | 'offline'
+
+  // Check on load if an admin session is actively running + DB connectivity
   useEffect(() => {
     let isMounted = true;
+
     const checkAdminSession = async () => {
-      if (!rtdb) return;
+      if (!rtdb) {
+        if (isMounted) setDbStatus('offline');
+        return;
+      }
       try {
         const snap = await get(ref(rtdb, 'system/adminSession'));
-        if (snap.exists() && isMounted) {
-          const data = snap.val();
-          if (data.isLoggedIn) {
-            setIsAdminLocked(true);
-            setActiveAdminName(data.name || 'Dr. Suresh Mishra');
+        if (isMounted) {
+          setDbStatus('connected');
+          if (snap.exists()) {
+            const data = snap.val();
+            if (data.isLoggedIn) {
+              setIsAdminLocked(true);
+              setActiveAdminName(data.name || 'Dr. Suresh Mishra');
+            } else {
+              setIsAdminLocked(false);
+            }
           } else {
             setIsAdminLocked(false);
           }
         }
       } catch (err) {
+        if (isMounted) setDbStatus('offline');
         console.warn('Error checking admin session:', err);
       }
     };
@@ -105,13 +129,22 @@ export default function AdminLoginPage() {
   };
 
   const handleForceUnlock = async () => {
+    if (!pin) {
+      setErrorMessage('Please enter your Admin PIN to release the session lock.');
+      return;
+    }
     setIsUnlocking(true);
     try {
-      await forceReleaseAdminLock();
-      setIsAdminLocked(false);
-      setErrorMessage('');
+      // Pass the current PIN to validate admin authority before releasing lock
+      const result = await forceReleaseAdminLock({ pin });
+      if (result.success) {
+        setIsAdminLocked(false);
+        setErrorMessage('');
+      } else {
+        setErrorMessage(result.message || 'Failed to release session lock. Incorrect PIN.');
+      }
     } catch (err) {
-      setErrorMessage('Failed to release session lock.');
+      setErrorMessage('Failed to release session lock: ' + (err.message || 'Unknown error'));
     } finally {
       setIsUnlocking(false);
     }
@@ -145,6 +178,19 @@ export default function AdminLoginPage() {
 
           <div className="p-6 sm:p-7 space-y-5">
             
+            {/* Firebase Database Status Pill */}
+            <div className="flex items-center justify-center gap-2 py-1 px-3 rounded-full border text-3xs font-semibold mx-auto w-fit"
+              style={{
+                borderColor: dbStatus === 'connected' ? '#22c55e44' : dbStatus === 'offline' ? '#ef444444' : '#6366f144',
+                background: dbStatus === 'connected' ? 'rgba(34,197,94,0.08)' : dbStatus === 'offline' ? 'rgba(239,68,68,0.10)' : 'rgba(99,102,241,0.08)',
+                color: dbStatus === 'connected' ? '#4ade80' : dbStatus === 'offline' ? '#f87171' : '#a5b4fc',
+              }}>
+              <span className={`w-1.5 h-1.5 rounded-full inline-block ${dbStatus === 'connected' ? 'bg-green-400 animate-pulse' : dbStatus === 'offline' ? 'bg-red-400' : 'bg-indigo-400 animate-pulse'}`}></span>
+              <span>
+                {dbStatus === 'connected' ? 'Firebase Realtime Database Connected' : dbStatus === 'offline' ? 'Database Offline (Local fallback)' : 'Connecting to Database...'}
+              </span>
+            </div>
+
             {/* Authorized Officer Badge (Single Admin Enforcement) */}
             <div className="p-3.5 rounded-2xl bg-indigo-950/60 border border-indigo-500/30 flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-indigo-800/80 flex items-center justify-center text-xl shadow-xs">
