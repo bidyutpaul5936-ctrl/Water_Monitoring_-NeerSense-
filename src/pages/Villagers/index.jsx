@@ -9,7 +9,8 @@ import {
   HeartPulse, 
   ArrowRight, 
   Droplets,
-  Bell
+  Bell,
+  LogIn
 } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useOfflineSync } from '../../contexts/OfflineSyncContext';
@@ -153,14 +154,23 @@ export default function VillagersPage() {
             )}
           </button>
 
-          {/* Action Link: Sign Up for Alerts */}
-          <Link
-            to="/villagers/signup"
-            className="ml-auto px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-300 whitespace-nowrap"
-          >
-            <Bell className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Sign Up for Alerts</span>
-          </Link>
+          {/* Action Links: Login + Sign Up for Alerts */}
+          <div className="ml-auto flex items-center gap-1.5 flex-shrink-0">
+            <Link
+              to="/villagers/login"
+              className="px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm bg-sky-50 text-sky-800 hover:bg-sky-100 border border-sky-300 whitespace-nowrap"
+            >
+              <LogIn className="w-3.5 h-3.5 text-sky-600" />
+              <span>Login</span>
+            </Link>
+            <Link
+              to="/villagers/signup"
+              className="px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-300 whitespace-nowrap"
+            >
+              <Bell className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Sign Up for Alerts</span>
+            </Link>
+          </div>
         </div>
       </div>
 

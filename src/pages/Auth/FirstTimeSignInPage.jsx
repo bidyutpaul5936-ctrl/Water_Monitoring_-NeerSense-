@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import {
   Droplets,
   ShieldCheck,
@@ -67,11 +67,17 @@ const ONBOARDING_ROLES = [
 
 export default function FirstTimeSignInPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const requestedRole = searchParams.get('role');
+  const requestedPhone = (searchParams.get('phone') || '').replace(/\D/g, '').slice(0, 10);
+
   const { registerPersonnel } = useAuthRole();
 
-  const [selectedRole, setSelectedRole] = useState(ROLES.ASHA);
+  const [selectedRole, setSelectedRole] = useState(
+    requestedRole && Object.values(ROLES).includes(requestedRole) ? requestedRole : ROLES.ASHA
+  );
   const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
+  const [phone, setPhone] = useState(requestedPhone);
   const [pin, setPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
   const [adminKey, setAdminKey] = useState('');
