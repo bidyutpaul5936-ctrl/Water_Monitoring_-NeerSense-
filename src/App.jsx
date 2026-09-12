@@ -14,10 +14,12 @@ import HealthLoginPage from './pages/Auth/HealthLoginPage';
 import HealthSignUpPage from './pages/Auth/HealthSignUpPage';
 import AdminLoginPage from './pages/Auth/AdminLoginPage';
 import VillagerSignUpPage from './pages/Auth/VillagerSignUpPage';
+import VillagerLoginPage from './pages/Auth/VillagerLoginPage';
 
 // Portal page components
 import HomePage from './pages/Home';
 import VillagersPage from './pages/Villagers';
+import VillagerAlertNotificationsPage from './pages/Villagers/VillagerAlertNotificationsPage';
 import AshaPage from './pages/Asha';
 import HygienePage from './pages/Hygiene';
 import AdminPage from './pages/Admin';
@@ -44,6 +46,8 @@ function MainLayout() {
           <Route path="/villagers/home" element={<VillagersPage />} />
           <Route path="/villagers/signup" element={<VillagerSignUpPage />} />
           <Route path="/village/alerts" element={<VillagerSignUpPage />} />
+          <Route path="/villagers/login" element={<VillagerLoginPage />} />
+          <Route path="/villagers/alerts" element={<VillagerAlertNotificationsPage />} />
 
           {/* ─── 2. HEALTH & FIELD STAFF AUTH (ASHA & Hygiene Only) ─── */}
           <Route path="/health/login" element={<HealthLoginPage />} />

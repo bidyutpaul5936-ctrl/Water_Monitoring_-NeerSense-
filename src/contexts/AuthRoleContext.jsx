@@ -1,6 +1,17 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { ref, set, get, update } from 'firebase/database';
-import { rtdb } from '../services/firebase';
+import {
+  ref,
+  set,
+  get,
+  update,
+} from 'firebase/database';
+import {
+  doc,
+  setDoc,
+  getDoc,
+  updateDoc,
+} from 'firebase/firestore';
+import { rtdb, db } from '../services/firebase';
 
 const AuthRoleContext = createContext();
 
@@ -14,47 +25,21 @@ export const ROLES = {
 };
 
 // ─── Fixed Credentials for Each Role (Single Admin System) ──────────────────
-// These are the ONLY valid credentials. Stored in DB on first use.
 export const FIXED_CREDENTIALS = {
-  [ROLES.VILLAGER]: {
-    phone: '0000000000',
-    pin: '',
-    name: 'Citizen User',
-    requiresPin: false,
-  },
-  [ROLES.ASHA]: {
-    phone: '9876543211',
-    pin: '5678',
-    name: 'Kuni Majhi (ASHA-071)',
-    requiresPin: true,
-  },
-  [ROLES.HYGIENE]: {
-    phone: '9876543212',
-    pin: '4321',
-    name: 'Dr. Meena Kumari (Hygiene Dept)',
-    requiresPin: true,
-  },
-  [ROLES.OFFICIAL]: {
-    phone: '9876543213',
-    pin: '1234',
-    name: 'Dr. Suresh Mishra (CDMO)',
-    requiresPin: true,
-  },
-  [ROLES.ADMIN]: {
-    phone: '9876543213',
-    pin: '1234',
-    name: 'Dr. Suresh Mishra (CDMO)',
-    requiresPin: true,
-  },
+  [ROLES.VILLAGER]: { phone: '0000000000', pin: '', name: 'Citizen User', requiresPin: false },
+  [ROLES.ASHA]:     { phone: '9876543211', pin: '5678', name: 'Kuni Majhi (ASHA-071)', requiresPin: true },
+  [ROLES.HYGIENE]:  { phone: '9876543212', pin: '4321', name: 'Dr. Meena Kumari (Hygiene Dept)', requiresPin: true },
+  [ROLES.OFFICIAL]: { phone: '9876543213', pin: '1234', name: 'Dr. Suresh Mishra (CDMO)', requiresPin: true },
+  [ROLES.ADMIN]:    { phone: '9876543213', pin: '1234', name: 'Dr. Suresh Mishra (CDMO)', requiresPin: true },
 };
 
 const ROLE_DEFAULTS = {
-  villager: { title: 'Villager / Citizen', avatar: '👨‍🌾', department: 'Public Health & Citizen Services' },
-  asha: { title: 'ASHA Field Worker', avatar: '👩‍⚕️', department: 'Community Health Surveillance' },
-  hygiene: { title: 'Water & Sanitation Officer', avatar: '👩‍🔬', department: 'Hygiene & Lab Testing Dept' },
-  official: { title: 'Government Health Officer (CDMO)', avatar: '🏛️', department: 'District Administration' },
-  panchayat: { title: 'Gram Panchayat Representative', avatar: '🏢', department: 'Local Village Governance' },
-  admin: { title: 'District Surveillance Administrator', avatar: '⚙️', department: 'Jal Shakti & Health Ministry' },
+  villager: { title: 'Villager / Citizen',              avatar: '👨‍🌾', department: 'Public Health & Citizen Services' },
+  asha:     { title: 'ASHA Field Worker',               avatar: '👩‍⚕️', department: 'Community Health Surveillance' },
+  hygiene:  { title: 'Water & Sanitation Officer',      avatar: '👩‍🔬', department: 'Hygiene & Lab Testing Dept' },
+  official: { title: 'Government Health Officer (CDMO)',avatar: '🏛️',  department: 'District Administration' },
+  panchayat:{ title: 'Gram Panchayat Representative',   avatar: '🏢',  department: 'Local Village Governance' },
+  admin:    { title: 'District Surveillance Administrator',avatar:'⚙️', department: 'Jal Shakti & Health Ministry' },
 };
 
 const SESSION_KEY = 'neersense_auth_session';
@@ -64,114 +49,198 @@ function getStoredSession() {
     const raw = localStorage.getItem(SESSION_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (parsed && parsed.role) {
-        return parsed;
-      }
+      if (parsed && parsed.role) return parsed;
     }
   } catch {}
   return null;
 }
 
-// ─── Store User Account in Firebase Realtime Database ───────────────────────
-async function saveAccountToDatabase(account) {
+const withTimeout = (promise, ms = 3500) =>
+  Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms))
+  ]);
+
+// ─── Realtime Database helpers ──────────────────────────────────────────────
+async function rtdbSet(path, data) {
   if (!rtdb) return;
+  try {
+    await withTimeout(set(ref(rtdb, path), data));
+  } catch (err) {
+    console.warn(`[NeerSense RTDB] write ${path}:`, err.message);
+  }
+}
+
+async function rtdbGet(path) {
+  if (!rtdb) return null;
+  try {
+    const snap = await withTimeout(get(ref(rtdb, path)));
+    return snap.exists() ? snap.val() : null;
+  } catch { return null; }
+}
+
+async function rtdbUpdate(path, data) {
+  if (!rtdb) return;
+  try {
+    await withTimeout(update(ref(rtdb, path), data));
+  } catch (err) {
+    console.warn(`[NeerSense RTDB] update ${path}:`, err.message);
+  }
+}
+
+// ─── Firestore helpers (dual-storage) ───────────────────────────────────────
+async function fsSet(path, data) {
+  if (!db) return;
+  const [col, ...rest] = path.split('/');
+  const docId = rest.join('/');
+  try {
+    await withTimeout(setDoc(doc(db, col, docId), data, { merge: true }));
+  } catch (err) {
+    console.warn(`[NeerSense FS] write ${path}:`, err.message);
+  }
+}
+
+async function fsGet(path) {
+  if (!db) return null;
+  const [col, ...rest] = path.split('/');
+  const docId = rest.join('/');
+  try {
+    const snap = await withTimeout(getDoc(doc(db, col, docId)));
+    return snap.exists() ? snap.val?.() ?? snap.data() : null;
+  } catch { return null; }
+}
+
+// ─── Store user account in RTDB + Firestore ─────────────────────────────────
+async function saveAccountToDatabase(account) {
   const { phone, role, name, villageId, villageName } = account;
   const cleanPhone = (phone || '').replace(/\D/g, '');
   const timestamp = Date.now();
 
   const userPayload = {
-    phone: cleanPhone,
-    role,
+    phone: cleanPhone, role,
     name: name || 'Authorized User',
     villageId: villageId || null,
     villageName: villageName || '',
     updatedAt: timestamp,
-    lastLogin: new Date().toISOString()
+    lastLogin: new Date().toISOString(),
   };
 
-  try {
-    // 1. Universal users directory (/users/{phone})
-    await set(ref(rtdb, `users/${cleanPhone}`), userPayload);
-
-    // 2. Role-specific database key
-    if (role === ROLES.ASHA) {
-      const ashaKey = `ASHA_${cleanPhone.slice(-6)}`;
-      await set(ref(rtdb, `Asha_Workers/${ashaKey}/profile`), {
-        ashaKey,
-        ashaId: ashaKey,
-        ashaName: name,
-        contactNumber: cleanPhone,
-        villageId,
-        villageName,
-        role: 'ASHA',
-        updatedAt: timestamp
-      });
-    } else if (role === ROLES.VILLAGER) {
-      await set(ref(rtdb, `Villagers/profiles/${cleanPhone}`), {
-        phone: cleanPhone,
-        name,
-        villageId,
-        villageName,
-        role: 'VILLAGER',
-        updatedAt: timestamp
-      });
-    } else if (role === ROLES.HYGIENE) {
-      await set(ref(rtdb, `Hygiene_Department/users/${cleanPhone}`), {
-        phone: cleanPhone,
-        name,
-        role: 'HYGIENE',
-        department: 'Water Quality & Health Surveillance',
-        updatedAt: timestamp
-      });
-    } else if (role === ROLES.OFFICIAL || role === ROLES.ADMIN) {
-      await set(ref(rtdb, `Admin/users/${cleanPhone}`), {
-        phone: cleanPhone,
-        name,
-        role: 'ADMIN',
-        designation: 'Government Health Officer / CDMO',
-        updatedAt: timestamp
-      });
-    }
-    console.info(`[NeerSense Auth] ⚡ Account ${cleanPhone} (${role}) stored in database`);
-  } catch (err) {
-    console.warn('[NeerSense Auth] Database account store warning:', err.message);
-  }
-}
-
-// ─── Store fixed credentials in Firebase on first boot ─────────────────────
-async function seedFixedCredentialsToDatabase() {
-  if (!rtdb) return;
-  try {
-    // Seed each role individually if it doesn't already exist (never overwrite user-set PINs)
-    for (const [role, cred] of Object.entries(FIXED_CREDENTIALS)) {
-      if (role === ROLES.PANCHAYAT) continue;
-      const roleRef = ref(rtdb, `system/credentials/${role}`);
-      const snapshot = await get(roleRef);
-      if (!snapshot.exists()) {
-        await set(roleRef, {
-          phone: cred.phone,
-          pin: cred.pin,
-          name: cred.name,
-          requiresPin: cred.requiresPin,
-          role,
-          createdAt: new Date().toISOString(),
+  // 1. Save to Realtime Database
+  if (rtdb) {
+    try {
+      await rtdbSet(`users/${cleanPhone}`, userPayload);
+      if (role === ROLES.ASHA) {
+        const ashaKey = `ASHA_${cleanPhone.slice(-6)}`;
+        await rtdbSet(`asha_workers/${ashaKey}`, {
+          ashaKey, ashaId: ashaKey, ashaName: name,
+          contactNumber: cleanPhone, villageId, villageName,
+          role: 'ASHA', updatedAt: timestamp,
         });
-        console.info(`[NeerSense Auth] ✅ Default credentials seeded for role: ${role}`);
+      } else if (role === ROLES.VILLAGER) {
+        await rtdbSet(`villagers/${cleanPhone}`, {
+          phone: cleanPhone, name, villageId, villageName,
+          role: 'VILLAGER', updatedAt: timestamp,
+        });
+      } else if (role === ROLES.HYGIENE) {
+        await rtdbSet(`hygiene_users/${cleanPhone}`, {
+          phone: cleanPhone, name, role: 'HYGIENE',
+          department: 'Water Quality & Health Surveillance', updatedAt: timestamp,
+        });
+      } else if (role === ROLES.OFFICIAL || role === ROLES.ADMIN) {
+        await rtdbSet(`admin_users/${cleanPhone}`, {
+          phone: cleanPhone, name, role: 'ADMIN',
+          designation: 'Government Health Officer / CDMO', updatedAt: timestamp,
+        });
       }
+      console.info(`[NeerSense RTDB] ✅ Account ${cleanPhone} (${role}) saved`);
+    } catch (err) {
+      console.warn('[NeerSense RTDB] Account save warning:', err.message);
     }
-  } catch (err) {
-    console.warn('[NeerSense Auth] Credential seed warning:', err.message);
+  }
+
+  // 2. Dual-save to Firestore
+  if (db) {
+    try {
+      await setDoc(doc(db, 'users', cleanPhone), userPayload, { merge: true });
+      if (role === ROLES.ASHA) {
+        const ashaKey = `ASHA_${cleanPhone.slice(-6)}`;
+        await setDoc(doc(db, 'asha_workers', ashaKey), {
+          ashaKey, ashaId: ashaKey, ashaName: name,
+          contactNumber: cleanPhone, villageId, villageName,
+          role: 'ASHA', updatedAt: timestamp,
+        }, { merge: true });
+      } else if (role === ROLES.VILLAGER) {
+        await setDoc(doc(db, 'villagers', cleanPhone), {
+          phone: cleanPhone, name, villageId, villageName,
+          role: 'VILLAGER', updatedAt: timestamp,
+        }, { merge: true });
+      } else if (role === ROLES.HYGIENE) {
+        await setDoc(doc(db, 'hygiene_users', cleanPhone), {
+          phone: cleanPhone, name, role: 'HYGIENE',
+          department: 'Water Quality & Health Surveillance', updatedAt: timestamp,
+        }, { merge: true });
+      } else if (role === ROLES.OFFICIAL || role === ROLES.ADMIN) {
+        await setDoc(doc(db, 'admin_users', cleanPhone), {
+          phone: cleanPhone, name, role: 'ADMIN',
+          designation: 'Government Health Officer / CDMO', updatedAt: timestamp,
+        }, { merge: true });
+      }
+    } catch (err) {
+      console.warn('[NeerSense Firestore] Account save warning:', err.message);
+    }
   }
 }
 
-// ─── Fetch the live PIN for a role from RTDB ────────────────────────────────
-// Falls back to hardcoded default if RTDB is unavailable
+// ─── Seed fixed credentials to RTDB and Firestore ───────────────────────────
+async function seedFixedCredentialsToDatabase() {
+  for (const [role, cred] of Object.entries(FIXED_CREDENTIALS)) {
+    if (role === ROLES.PANCHAYAT) continue;
+    const credData = {
+      phone: cred.phone, pin: cred.pin, name: cred.name,
+      requiresPin: cred.requiresPin, role,
+      createdAt: new Date().toISOString(),
+    };
+
+    // RTDB seed
+    if (rtdb) {
+      try {
+        const existing = await rtdbGet(`system_credentials/${role}`);
+        if (!existing) {
+          await rtdbSet(`system_credentials/${role}`, credData);
+          console.info(`[NeerSense RTDB] ✅ Default credentials seeded for role: ${role}`);
+        }
+      } catch {}
+    }
+
+    // Firestore seed
+    if (db) {
+      try {
+        const credRef = doc(db, 'system_credentials', role);
+        const snap = await getDoc(credRef);
+        if (!snap.exists()) {
+          await setDoc(credRef, credData);
+        }
+      } catch {}
+    }
+  }
+}
+
+// ─── Fetch live PIN for a role from RTDB / Firestore ────────────────────────
 async function fetchLivePin(role) {
-  if (!rtdb) return FIXED_CREDENTIALS[role]?.pin || '';
-  try {
-    const snap = await get(ref(rtdb, `system/credentials/${role}/pin`));
-    if (snap.exists()) return String(snap.val());
-  } catch {}
+  // 1. Try RTDB
+  if (rtdb) {
+    try {
+      const snap = await rtdbGet(`system_credentials/${role}`);
+      if (snap && snap.pin) return String(snap.pin);
+    } catch {}
+  }
+  // 2. Try Firestore
+  if (db) {
+    try {
+      const snap = await getDoc(doc(db, 'system_credentials', role));
+      if (snap.exists() && snap.data().pin) return String(snap.data().pin);
+    } catch {}
+  }
   return FIXED_CREDENTIALS[role]?.pin || '';
 }
 
@@ -185,490 +254,446 @@ export const AuthRoleProvider = ({ children }) => {
   );
   const [adminActivePage, setAdminActivePage] = useState('admin');
 
-  // Seed fixed credentials to Firebase on mount
-  useEffect(() => {
-    seedFixedCredentialsToDatabase();
-  }, []);
+  useEffect(() => { seedFixedCredentialsToDatabase(); }, []);
 
-  // Single Admin Heartbeat: maintain active admin session lock while logged in
+  // Admin heartbeat
   useEffect(() => {
-    if ((activeRole === ROLES.ADMIN || activeRole === ROLES.OFFICIAL) && rtdb) {
-      const heartbeatInterval = setInterval(() => {
-        update(ref(rtdb, 'system/adminSession'), {
-          lastHeartbeat: Date.now()
-        }).catch(() => {});
+    if (activeRole === ROLES.ADMIN || activeRole === ROLES.OFFICIAL) {
+      const iv = setInterval(() => {
+        if (rtdb) rtdbUpdate('system/adminSession', { lastHeartbeat: Date.now() }).catch(() => {});
+        if (db) updateDoc(doc(db, 'system', 'adminSession'), { lastHeartbeat: Date.now() }).catch(() => {});
       }, 45000);
-      return () => clearInterval(heartbeatInterval);
+      return () => clearInterval(iv);
     }
   }, [activeRole]);
 
-  // ─── Derived role flags ────────────────────────────────────────────────────
   const isGovernment = activeRole === ROLES.OFFICIAL || activeRole === ROLES.ADMIN;
-  const isAsha = activeRole === ROLES.ASHA;
-  const isHygiene = activeRole === ROLES.HYGIENE;
-  const isVillager = activeRole === ROLES.VILLAGER;
+  const isAsha      = activeRole === ROLES.ASHA;
+  const isHygiene   = activeRole === ROLES.HYGIENE;
+  const isVillager  = activeRole === ROLES.VILLAGER;
 
   const currentUser = currentUserState || {
     role: activeRole || ROLES.VILLAGER,
     ...ROLE_DEFAULTS[activeRole || ROLES.VILLAGER],
   };
 
-// ─── Fetch a registered user from RTDB ──────────────────────────────────────
-async function fetchRegisteredUser(phone) {
-  if (!rtdb) return null;
-  try {
-    const snap = await get(ref(rtdb, `users/${phone}`));
-    if (snap.exists()) return snap.val();
-  } catch {}
-  return null;
-}
+  // ─── Fetch a registered user from RTDB / Firestore ──────────────────────
+  async function fetchRegisteredUser(phone) {
+    const cleanPhone = (phone || '').replace(/\D/g, '');
+    if (!cleanPhone) return null;
+    if (rtdb) {
+      try {
+        const snap = await rtdbGet(`users/${cleanPhone}`);
+        if (snap) return snap;
+        const ashaSnap = await rtdbGet(`asha_workers/ASHA_${cleanPhone.slice(-6)}`);
+        if (ashaSnap) return ashaSnap;
+        const hygieneSnap = await rtdbGet(`hygiene_users/${cleanPhone}`);
+        if (hygieneSnap) return hygieneSnap;
+        const citizenSnap = await rtdbGet(`citizens/${cleanPhone}`);
+        if (citizenSnap) return citizenSnap;
+        const villagerSnap = await rtdbGet(`villagers/${cleanPhone}`);
+        if (villagerSnap) return villagerSnap;
+      } catch {}
+    }
+    if (db) {
+      try {
+        const snap = await getDoc(doc(db, 'users', cleanPhone));
+        if (snap.exists()) return snap.data();
+      } catch {}
+    }
+    return null;
+  }
 
-// ─── Login with Phone & Role (PIN Validated Against RTDB Live Credentials) ─
+  // ─── Live lookup helper to check if a phone number is registered ─────────
+  const checkPhoneRegistration = async (phone, role) => {
+    const cleanPhone = (phone || '').replace(/\D/g, '');
+    if (cleanPhone.length < 10) return { isRegistered: false };
+
+    // Check fixed role credentials
+    if (role && FIXED_CREDENTIALS[role] && cleanPhone === FIXED_CREDENTIALS[role].phone) {
+      return {
+        isRegistered: true,
+        isDefaultDemo: true,
+        user: { name: FIXED_CREDENTIALS[role].name, role },
+      };
+    }
+
+    const reg = await fetchRegisteredUser(cleanPhone);
+    if (reg) {
+      return {
+        isRegistered: true,
+        isDefaultDemo: false,
+        user: reg,
+      };
+    }
+    return { isRegistered: false, phone: cleanPhone };
+  };
+
+  // ─── Login with Phone & Role ─────────────────────────────────────────────
   const loginWithPhone = async ({ phone, pin, role, name, villageId, villageName }) => {
     const cleanPhone = (phone || '').replace(/\D/g, '');
     const roleKey = role || ROLES.VILLAGER;
 
-    if (cleanPhone.length < 10) {
+    if (cleanPhone.length < 10)
       return { success: false, message: 'Please enter a valid 10-digit mobile number.' };
-    }
 
-    // Villager: open access
+    // Villager: open access — no PIN
     if (roleKey === ROLES.VILLAGER) {
       const defaultObj = ROLE_DEFAULTS.villager;
       const userAccount = {
-        phone: cleanPhone,
-        role: ROLES.VILLAGER,
+        phone: cleanPhone, role: ROLES.VILLAGER,
         name: name?.trim() || 'Citizen User',
         villageId: villageId || 'vil-01',
         villageName: villageName || 'Gosaba Island (Rangabelia)',
-        avatar: defaultObj.avatar,
-        title: defaultObj.title,
+        avatar: defaultObj.avatar, title: defaultObj.title,
         department: defaultObj.department,
-        lastLogin: new Date().toISOString()
+        lastLogin: new Date().toISOString(),
       };
-
-      try {
-        localStorage.setItem(SESSION_KEY, JSON.stringify(userAccount));
-      } catch {}
+      try { localStorage.setItem(SESSION_KEY, JSON.stringify(userAccount)); } catch {}
       saveAccountToDatabase(userAccount).catch(() => {});
-
       setActiveRoleState(ROLES.VILLAGER);
       setCurrentUserState(userAccount);
       setIsAuthenticated(true);
       return { success: true, user: userAccount };
     }
 
-    // Restricted personnel roles (ASHA, HYGIENE, ADMIN, OFFICIAL)
+    // Restricted personnel roles
     const fixedCred = FIXED_CREDENTIALS[roleKey];
-    if (!fixedCred) {
-      return { success: false, message: 'Invalid role selected.' };
-    }
+    if (!fixedCred) return { success: false, message: 'Invalid role selected.' };
 
     const isAdminRole = roleKey === ROLES.ADMIN || roleKey === ROLES.OFFICIAL;
 
-    // ─── STRICT SINGLE-ADMIN ENFORCEMENT ──────────────────────────────────
+    // Single-admin enforcement
     if (isAdminRole) {
-      // 1. Only the single designated admin user can log in as Admin
       let designatedAdminPhone = FIXED_CREDENTIALS[ROLES.ADMIN].phone;
       if (rtdb) {
         try {
-          const adminSnap = await get(ref(rtdb, 'system/credentials/admin/phone'));
-          if (adminSnap.exists() && adminSnap.val()) {
-            designatedAdminPhone = String(adminSnap.val()).replace(/\D/g, '');
+          const snap = await rtdbGet('system_credentials/admin');
+          if (snap && snap.phone) designatedAdminPhone = String(snap.phone).replace(/\D/g, '');
+        } catch {}
+      }
+      if (cleanPhone !== designatedAdminPhone && db) {
+        try {
+          const snap = await getDoc(doc(db, 'system_credentials', 'admin'));
+          if (snap.exists() && snap.data().phone) {
+            designatedAdminPhone = String(snap.data().phone).replace(/\D/g, '');
           }
         } catch {}
       }
-
       if (cleanPhone !== designatedAdminPhone) {
         return {
           success: false,
-          message: 'Access Denied: In NeerSense, there is strictly only ONE authorized District Admin user. Other users cannot log in as Admin.'
+          isUnregistered: true,
+          message: `Access Denied: Number +91 ${cleanPhone} is not registered as the designated District CDMO Admin. NeerSense strictly enforces a single registered District Admin account.`,
         };
       }
 
-      // 2. Only ONE admin user can be logged in at a time — check active session lock
+      let sess = null;
       if (rtdb) {
         try {
-          const sessSnap = await get(ref(rtdb, 'system/adminSession'));
-          if (sessSnap.exists()) {
-            const sess = sessSnap.val();
-            const mySessionId = localStorage.getItem('neersense_admin_session_id');
-            const lastActive = sess.lastHeartbeat || 0;
-            const isRecent = (Date.now() - lastActive) < 15 * 60 * 1000;
-
-            if (sess.isLoggedIn && isRecent && sess.sessionId && sess.sessionId !== mySessionId) {
-              return {
-                success: false,
-                isAdminLocked: true,
-                message: 'Admin Access Locked: Only one user can log in as Admin. An active Admin session is already open. Other logins are blocked until the current admin logs out.'
-              };
-            }
-          }
+          sess = await rtdbGet('system/adminSession');
         } catch {}
+      }
+      if (!sess && db) {
+        try {
+          const sessSnap = await getDoc(doc(db, 'system', 'adminSession'));
+          if (sessSnap.exists()) sess = sessSnap.data();
+        } catch {}
+      }
+      if (sess) {
+        const mySessionId = localStorage.getItem('neersense_admin_session_id');
+        const isRecent = (Date.now() - (sess.lastHeartbeat || 0)) < 15 * 60 * 1000;
+        if (sess.isLoggedIn && isRecent && sess.sessionId && sess.sessionId !== mySessionId) {
+          return {
+            success: false,
+            isAdminLocked: true,
+            message: 'Admin Access Locked: An active Admin session is already open.',
+          };
+        }
       }
     }
 
-    // 1. Check if user is registered in the database
     const registeredUser = await fetchRegisteredUser(cleanPhone);
-    let matchedPin = null;
-    let userName = name?.trim() || fixedCred.name;
-    let userVillageId = villageId || 'vil-01';
+    let matchedPin  = null;
+    let userName    = name?.trim() || fixedCred.name;
+    let userVillageId   = villageId || 'vil-01';
     let userVillageName = villageName || 'Gosaba Island (Rangabelia)';
 
     if (registeredUser) {
-      // Validate role
-      if (registeredUser.role && registeredUser.role !== roleKey && !(registeredUser.role === 'official' && roleKey === 'admin')) {
+      if (
+        registeredUser.role &&
+        registeredUser.role !== roleKey &&
+        !(registeredUser.role === 'official' && roleKey === 'admin')
+      ) {
         return {
           success: false,
-          message: `This mobile number is registered as ${registeredUser.role.toUpperCase()}, not ${roleKey.toUpperCase()}. Please select your registered role.`
+          message: `This number is registered as ${registeredUser.role.toUpperCase()}, not ${roleKey.toUpperCase()}.`,
         };
       }
-      userName = registeredUser.name || userName;
-      userVillageId = registeredUser.villageId || userVillageId;
+      userName        = registeredUser.name || userName;
+      userVillageId   = registeredUser.villageId || userVillageId;
       userVillageName = registeredUser.villageName || userVillageName;
-      matchedPin = registeredUser.pin;
+      matchedPin      = registeredUser.pin;
     } else if (cleanPhone === fixedCred.phone) {
-      // Default / seeded system credentials
       matchedPin = await fetchLivePin(roleKey);
-      userName = fixedCred.name;
+      userName   = fixedCred.name;
     } else {
-      // Unrecognized phone number for restricted personnel
       return {
         success: false,
         isUnregistered: true,
-        message: 'No registered personnel account found for this mobile number. Please register using the First-Time Sign In page.'
+        message: 'No registered personnel account found. Please register first.',
       };
     }
 
-    // Verify Security PIN
-    if (!pin) {
-      return { success: false, message: 'Security PIN is required for personnel login.' };
-    }
+    if (!pin) return { success: false, message: 'Security PIN is required for personnel login.' };
 
     const liveRolePin = await fetchLivePin(roleKey);
-    const pinToCheck = String(pin).trim();
-
+    const pinToCheck  = String(pin).trim();
     if (pinToCheck !== String(matchedPin).trim() && pinToCheck !== String(liveRolePin).trim()) {
-      return { success: false, message: 'Incorrect Security PIN. Please verify your PIN.' };
+      return { success: false, message: 'Incorrect Security PIN. Please try again.' };
     }
 
     const defaultObj = ROLE_DEFAULTS[roleKey] || ROLE_DEFAULTS.villager;
     const userAccount = {
-      phone: cleanPhone,
-      role: roleKey,
-      name: userName,
-      villageId: userVillageId,
-      villageName: userVillageName,
-      avatar: defaultObj.avatar,
-      title: defaultObj.title,
+      phone: cleanPhone, role: roleKey, name: userName,
+      villageId: userVillageId, villageName: userVillageName,
+      avatar: defaultObj.avatar, title: defaultObj.title,
       department: defaultObj.department,
-      lastLogin: new Date().toISOString()
+      lastLogin: new Date().toISOString(),
     };
 
-    // If Admin, lock the active session in RTDB & local storage
     if (isAdminRole) {
       const newSessionId = 'ADMIN_SESS_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
-      try {
-        localStorage.setItem('neersense_admin_session_id', newSessionId);
-      } catch {}
-
-      if (rtdb) {
-        update(ref(rtdb, 'system/adminSession'), {
-          isLoggedIn: true,
-          phone: cleanPhone,
-          name: userName,
-          sessionId: newSessionId,
-          loginTime: new Date().toISOString(),
-          lastHeartbeat: Date.now()
-        }).catch(() => {});
-      }
-
-      fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ role: 'admin', phone: cleanPhone, pin: pinToCheck, sessionId: newSessionId })
-      }).catch(() => {});
+      try { localStorage.setItem('neersense_admin_session_id', newSessionId); } catch {}
+      const sessData = {
+        isLoggedIn: true, phone: cleanPhone, name: userName,
+        sessionId: newSessionId, loginTime: new Date().toISOString(),
+        lastHeartbeat: Date.now(),
+      };
+      if (rtdb) rtdbSet('system/adminSession', sessData).catch(() => {});
+      if (db) setDoc(doc(db, 'system', 'adminSession'), sessData, { merge: true }).catch(() => {});
     }
 
-    try {
-      localStorage.setItem(SESSION_KEY, JSON.stringify(userAccount));
-    } catch {}
-
+    try { localStorage.setItem(SESSION_KEY, JSON.stringify(userAccount)); } catch {}
     saveAccountToDatabase(userAccount).catch(() => {});
-
     setActiveRoleState(roleKey);
     setCurrentUserState(userAccount);
     setIsAuthenticated(true);
-
     return { success: true, user: userAccount };
   };
 
-  // ─── First-Time Personnel Sign In / Registration ──────────────────────────
+  // ─── First-Time Personnel Sign In / Registration ─────────────────────────
   const registerPersonnel = async ({ name, phone, role, pin, villageId, villageName, adminKey }) => {
     const cleanPhone = (phone || '').replace(/\D/g, '');
-    if (cleanPhone.length < 10) {
+    if (cleanPhone.length < 10)
       return { success: false, message: 'Please enter a valid 10-digit mobile number.' };
-    }
 
     const roleKey = role || ROLES.ASHA;
 
-    // Single admin protection
     if (roleKey === ROLES.ADMIN || roleKey === ROLES.OFFICIAL) {
-      // Check if an admin is already registered in RTDB
       if (rtdb) {
         try {
-          const adminSnap = await get(ref(rtdb, 'system/credentials/admin'));
-          if (adminSnap.exists() && adminSnap.val().phone && adminSnap.val().phone !== cleanPhone) {
-            return {
-              success: false,
-              message: 'Registration Denied: In NeerSense, there can only be ONE Admin user. The District Admin account is already registered.'
-            };
+          const snap = await rtdbGet('system_credentials/admin');
+          if (snap && snap.phone && snap.phone !== cleanPhone) {
+            return { success: false, message: 'Registration Denied: Admin account is already registered.' };
+          }
+        } catch {}
+      } else if (db) {
+        try {
+          const snap = await getDoc(doc(db, 'system_credentials', 'admin'));
+          if (snap.exists() && snap.data().phone && snap.data().phone !== cleanPhone) {
+            return { success: false, message: 'Registration Denied: Admin account is already registered.' };
           }
         } catch {}
       }
-
       if (adminKey !== 'NEER-ADMIN-2026' && adminKey !== '1234') {
-        return {
-          success: false,
-          message: 'Admin Authorization Code is required. District Admin role is restricted to a single verified health official.'
-        };
+        return { success: false, message: 'Admin Authorization Code is required.' };
       }
     }
 
-    if (roleKey !== ROLES.VILLAGER) {
-      if (!pin || String(pin).trim().length < 4) {
-        return { success: false, message: 'Security PIN must be at least 4 digits or characters.' };
-      }
+    if (roleKey !== ROLES.VILLAGER && (!pin || String(pin).trim().length < 4)) {
+      return { success: false, message: 'Security PIN must be at least 4 digits.' };
     }
 
     const pinStr = pin ? String(pin).trim() : '1234';
     const defaultObj = ROLE_DEFAULTS[roleKey] || ROLE_DEFAULTS.villager;
-    const finalName = name?.trim() || defaultObj.title;
+    const finalName  = name?.trim() || defaultObj.title;
 
     const userAccount = {
-      phone: cleanPhone,
-      role: roleKey,
-      name: finalName,
-      pin: pinStr,
+      phone: cleanPhone, role: roleKey, name: finalName, pin: pinStr,
       villageId: villageId || 'vil-01',
       villageName: villageName || 'Gosaba Island (Rangabelia)',
-      avatar: defaultObj.avatar,
-      title: defaultObj.title,
+      avatar: defaultObj.avatar, title: defaultObj.title,
       department: defaultObj.department,
       registeredAt: new Date().toISOString(),
-      lastLogin: new Date().toISOString()
+      lastLogin: new Date().toISOString(),
     };
 
     try {
-      // 1. Save into Firebase Realtime Database
+      // 1. RTDB save
       if (rtdb) {
-        await set(ref(rtdb, `users/${cleanPhone}`), userAccount);
-        // Also update role credentials in RTDB
-        await update(ref(rtdb, `system/credentials/${roleKey}`), {
-          phone: cleanPhone,
-          pin: pinStr,
-          name: finalName,
+        await rtdbSet(`users/${cleanPhone}`, userAccount);
+        await rtdbSet(`system_credentials/${roleKey}`, {
+          phone: cleanPhone, pin: pinStr, name: finalName,
           requiresPin: roleKey !== ROLES.VILLAGER,
           updatedAt: new Date().toISOString(),
-          pinUpdatedAt: new Date().toISOString()
         });
 
-        // Department-specific records
         if (roleKey === ROLES.ASHA) {
           const ashaKey = `ASHA_${cleanPhone.slice(-6)}`;
-          await set(ref(rtdb, `Asha_Workers/${ashaKey}/profile`), {
-            ashaKey,
-            ashaId: ashaKey,
-            ashaName: finalName,
+          await rtdbSet(`asha_workers/${ashaKey}`, {
+            ashaKey, ashaId: ashaKey, ashaName: finalName,
             contactNumber: cleanPhone,
             villageId: userAccount.villageId,
             villageName: userAccount.villageName,
-            role: 'ASHA',
-            pin: pinStr,
-            updatedAt: Date.now()
+            role: 'ASHA', pin: pinStr, updatedAt: Date.now(),
           });
         } else if (roleKey === ROLES.HYGIENE) {
-          await set(ref(rtdb, `Hygiene_Department/users/${cleanPhone}`), {
-            phone: cleanPhone,
-            name: finalName,
-            role: 'HYGIENE',
+          await rtdbSet(`hygiene_users/${cleanPhone}`, {
+            phone: cleanPhone, name: finalName, role: 'HYGIENE',
             department: 'Water Quality & Health Surveillance',
-            pin: pinStr,
-            updatedAt: Date.now()
+            pin: pinStr, updatedAt: Date.now(),
           });
         }
       }
 
-      // 2. Notify backend Express server
-      fetch('/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          phone: cleanPhone,
-          pin: pinStr,
-          role: roleKey,
-          name: finalName,
-          villageId: userAccount.villageId,
-          villageName: userAccount.villageName
-        })
-      }).catch(() => {});
+      // 2. Firestore dual-save (safe, non-blocking fallback)
+      if (db) {
+        try {
+          await setDoc(doc(db, 'users', cleanPhone), userAccount, { merge: true });
+          await setDoc(doc(db, 'system_credentials', roleKey), {
+            phone: cleanPhone, pin: pinStr, name: finalName,
+            requiresPin: roleKey !== ROLES.VILLAGER,
+            updatedAt: new Date().toISOString(),
+          }, { merge: true });
 
-      // 3. Store active session
-      try {
-        localStorage.setItem(SESSION_KEY, JSON.stringify(userAccount));
-      } catch {}
+          if (roleKey === ROLES.ASHA) {
+            const ashaKey = `ASHA_${cleanPhone.slice(-6)}`;
+            await setDoc(doc(db, 'asha_workers', ashaKey), {
+              ashaKey, ashaId: ashaKey, ashaName: finalName,
+              contactNumber: cleanPhone,
+              villageId: userAccount.villageId,
+              villageName: userAccount.villageName,
+              role: 'ASHA', pin: pinStr, updatedAt: Date.now(),
+            }, { merge: true });
+          } else if (roleKey === ROLES.HYGIENE) {
+            await setDoc(doc(db, 'hygiene_users', cleanPhone), {
+              phone: cleanPhone, name: finalName, role: 'HYGIENE',
+              department: 'Water Quality & Health Surveillance',
+              pin: pinStr, updatedAt: Date.now(),
+            }, { merge: true });
+          }
+        } catch (fsErr) {
+          console.warn('[NeerSense Firestore] Registration dual-write note:', fsErr.message);
+        }
+      }
 
+      try { localStorage.setItem(SESSION_KEY, JSON.stringify(userAccount)); } catch {}
       setActiveRoleState(roleKey);
       setCurrentUserState(userAccount);
       setIsAuthenticated(true);
 
-      console.info(`[NeerSense Auth] 🌟 First-time personnel signed in: ${finalName} (${cleanPhone} - ${roleKey})`);
+      console.info(`[NeerSense Auth] 🌟 Personnel registered: ${finalName} (${cleanPhone} - ${roleKey})`);
       return { success: true, user: userAccount };
     } catch (err) {
       console.error('[NeerSense Auth] Registration error:', err);
-      return { success: false, message: 'Failed to complete registration in database. Please try again.' };
+      return { success: false, message: 'Failed to save to database: ' + (err.message || 'Please try again.') };
     }
   };
 
-  // ─── Change PIN (Self-Service) ─────────────────────────────────────────────
-  // Any logged-in staff member can update their own PIN stored in RTDB
+  // ─── Change PIN ───────────────────────────────────────────────────────────
   const changePin = async ({ currentPin, newPin }) => {
     const role = activeRole;
-    if (!role || role === ROLES.VILLAGER) {
-      return { success: false, message: 'PIN change is not available for your role.' };
-    }
-    if (!newPin || newPin.length < 4) {
-      return { success: false, message: 'New PIN must be at least 4 characters long.' };
-    }
-
-    // 1. Verify current PIN against live RTDB value
+    if (!role || role === ROLES.VILLAGER)
+      return { success: false, message: 'PIN change not available for your role.' };
+    if (!newPin || newPin.length < 4)
+      return { success: false, message: 'New PIN must be at least 4 characters.' };
     const livePin = await fetchLivePin(role);
-    if (currentPin !== livePin) {
-      return { success: false, message: 'Current PIN is incorrect. Please try again.' };
-    }
-
-    // 2. Write new PIN to RTDB
+    if (currentPin !== livePin)
+      return { success: false, message: 'Current PIN is incorrect.' };
     try {
-      if (rtdb) {
-        await update(ref(rtdb, `system/credentials/${role}`), {
-          pin: newPin,
-          pinUpdatedAt: new Date().toISOString(),
-          pinUpdatedBy: currentUser?.name || role,
-        });
-        console.info(`[NeerSense Auth] ⚡ PIN updated for role: ${role}`);
+      const pinPayload = {
+        pin: newPin, pinUpdatedAt: new Date().toISOString(),
+        pinUpdatedBy: currentUser?.name || role,
+      };
+      if (rtdb) await rtdbUpdate(`system_credentials/${role}`, pinPayload);
+      if (db) {
+        try {
+          await updateDoc(doc(db, 'system_credentials', role), pinPayload);
+        } catch {}
       }
-      // Also update the Express server-side credential store
-      fetch('/api/auth/update-pin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ role, newPin }),
-      }).catch(() => {});
-
       return { success: true };
     } catch (err) {
-      console.error('[NeerSense Auth] PIN update error:', err);
-      return { success: false, message: 'Failed to save new PIN to database. Please try again.' };
+      return { success: false, message: 'Failed to save new PIN: ' + err.message };
     }
   };
 
-  // ─── Set/Reset Security PIN (Personnel Independence) ──────────────────────
-  // Allows department personnel to independently set or reset their security PIN
-  // and store it directly in Firebase Realtime Database and backend server.
+  // ─── Set Security PIN ─────────────────────────────────────────────────────
   const setSecurityPin = async ({ role, phone, newPin }) => {
     const roleKey = role || activeRole;
-    if (!roleKey || roleKey === ROLES.VILLAGER) {
-      return { success: false, message: 'PIN setup is only required for department login personnel.' };
-    }
-
+    if (!roleKey || roleKey === ROLES.VILLAGER)
+      return { success: false, message: 'PIN setup only for department login personnel.' };
     const fixedCred = FIXED_CREDENTIALS[roleKey];
-    if (!fixedCred) {
-      return { success: false, message: 'Invalid role selected.' };
-    }
-
+    if (!fixedCred) return { success: false, message: 'Invalid role.' };
     const cleanPhone = (phone || '').replace(/\D/g, '');
-    if (cleanPhone && cleanPhone !== fixedCred.phone) {
-      return { success: false, message: `Provided phone does not match the registered number for ${fixedCred.name}.` };
-    }
-
-    if (!newPin || String(newPin).trim().length < 4) {
-      return { success: false, message: 'Security PIN must be at least 4 digits or characters.' };
-    }
-
+    if (cleanPhone && cleanPhone !== fixedCred.phone)
+      return { success: false, message: `Phone does not match registered number for ${fixedCred.name}.` };
+    if (!newPin || String(newPin).trim().length < 4)
+      return { success: false, message: 'PIN must be at least 4 digits.' };
     const pinStr = String(newPin).trim();
-
     try {
-      if (rtdb) {
-        await update(ref(rtdb, `system/credentials/${roleKey}`), {
-          pin: pinStr,
-          pinUpdatedAt: new Date().toISOString(),
-          pinUpdatedBy: currentUser?.name || fixedCred.name || roleKey,
-        });
-        console.info(`[NeerSense Auth] ⚡ Security PIN stored in Firebase RTDB for ${roleKey}`);
+      const pinPayload = {
+        pin: pinStr, pinUpdatedAt: new Date().toISOString(),
+        pinUpdatedBy: currentUser?.name || fixedCred.name || roleKey,
+      };
+      if (rtdb) await rtdbUpdate(`system_credentials/${roleKey}`, pinPayload);
+      if (db) {
+        try {
+          await setDoc(doc(db, 'system_credentials', roleKey), pinPayload, { merge: true });
+        } catch {}
       }
-      // Also update the Express server-side credential store
-      fetch('/api/auth/update-pin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ role: roleKey, newPin: pinStr }),
-      }).catch(() => {});
-
       return { success: true, pin: pinStr };
     } catch (err) {
-      console.error('[NeerSense Auth] Set PIN error:', err);
-      return { success: false, message: 'Failed to save new PIN to database. Please check your network connection.' };
+      return { success: false, message: 'Failed to save PIN: ' + err.message };
     }
   };
 
-  // ─── Force Release Admin Lock (Single Admin Recovery with Correct PIN) ────
+  // ─── Force Release Admin Lock ─────────────────────────────────────────────
   const forceReleaseAdminLock = async ({ pin }) => {
     const livePin = await fetchLivePin(ROLES.ADMIN);
-    if (String(pin).trim() !== String(livePin).trim()) {
-      return { success: false, message: 'Incorrect Admin PIN. Cannot release admin session lock.' };
-    }
+    if (String(pin).trim() !== String(livePin).trim())
+      return { success: false, message: 'Incorrect Admin PIN.' };
     try {
-      if (rtdb) {
-        await update(ref(rtdb, 'system/adminSession'), {
-          isLoggedIn: false,
-          phone: null,
-          sessionId: null,
-          forcedReleaseAt: new Date().toISOString()
-        });
+      const lockPayload = {
+        isLoggedIn: false, phone: null, sessionId: null,
+        forcedReleaseAt: new Date().toISOString(),
+      };
+      if (rtdb) await rtdbUpdate('system/adminSession', lockPayload);
+      if (db) {
+        try {
+          await setDoc(doc(db, 'system', 'adminSession'), lockPayload, { merge: true });
+        } catch {}
       }
-      fetch('/api/auth/logout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ role: 'admin' })
-      }).catch(() => {});
       return { success: true };
     } catch (err) {
       return { success: false, message: 'Failed to release lock: ' + err.message };
     }
   };
 
-  // ─── Logout (Releases Single Admin Lock if Admin) ─────────────────────────
+  // ─── Logout ───────────────────────────────────────────────────────────────
   const logout = () => {
     if (activeRole === ROLES.ADMIN || activeRole === ROLES.OFFICIAL) {
-      try {
-        localStorage.removeItem('neersense_admin_session_id');
-      } catch {}
-      if (rtdb) {
-        update(ref(rtdb, 'system/adminSession'), {
-          isLoggedIn: false,
-          phone: null,
-          sessionId: null,
-          loggedOutAt: new Date().toISOString()
-        }).catch(() => {});
+      try { localStorage.removeItem('neersense_admin_session_id'); } catch {}
+      const logoutPayload = {
+        isLoggedIn: false, phone: null, sessionId: null,
+        loggedOutAt: new Date().toISOString(),
+      };
+      if (rtdb) rtdbUpdate('system/adminSession', logoutPayload).catch(() => {});
+      if (db) {
+        setDoc(doc(db, 'system', 'adminSession'), logoutPayload, { merge: true }).catch(() => {});
       }
-      fetch('/api/auth/logout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ role: 'admin' })
-      }).catch(() => {});
     }
-
-    try {
-      localStorage.removeItem(SESSION_KEY);
-    } catch {}
+    try { localStorage.removeItem(SESSION_KEY); } catch {}
     setIsAuthenticated(false);
     setActiveRoleState(null);
     setCurrentUserState(null);
@@ -677,27 +702,25 @@ async function fetchRegisteredUser(phone) {
   return (
     <AuthRoleContext.Provider
       value={{
-        // State
         isAuthenticated,
         activeRole,
         currentUser,
         adminActivePage,
         setAdminActivePage,
         authLoading: false,
-        // Role flags
         ROLES,
         isGovernment,
         isAsha,
         isHygiene,
         isVillager,
-        // Authentication methods
         loginWithPhone,
         registerPersonnel,
         logout,
         changePin,
         setSecurityPin,
         forceReleaseAdminLock,
-        // Expose fixed credentials config (for GovernmentAuthGate validation)
+        checkPhoneRegistration,
+        fetchRegisteredUser,
         FIXED_CREDENTIALS,
         allProfiles: ROLE_DEFAULTS,
       }}

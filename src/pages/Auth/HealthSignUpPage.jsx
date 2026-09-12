@@ -43,6 +43,7 @@ export default function HealthSignUpPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const requestedRole = searchParams.get('role');
+  const requestedPhone = (searchParams.get('phone') || '').replace(/\D/g, '').slice(0, 10);
 
   const { registerPersonnel } = useAuthRole();
 
@@ -50,7 +51,7 @@ export default function HealthSignUpPage() {
     requestedRole === ROLES.HYGIENE ? ROLES.HYGIENE : ROLES.ASHA
   );
   const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
+  const [phone, setPhone] = useState(requestedPhone);
   const [pin, setPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
   const [villageId, setVillageId] = useState('vil-wb-01');

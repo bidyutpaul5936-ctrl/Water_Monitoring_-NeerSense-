@@ -13,9 +13,10 @@ import {
   Eye,
   EyeOff,
   Waves,
-  Shield,
+  Shield, 
   ArrowLeft,
-  KeyRound
+  KeyRound,
+  Sparkles
 } from 'lucide-react';
 import { useAuthRole, ROLES, FIXED_CREDENTIALS } from '../../contexts/AuthRoleContext';
 import { WEST_BENGAL_VILLAGES } from '../../utils/westBengalVillages';
@@ -69,7 +70,7 @@ export default function LoginPage() {
   const [searchParams] = useSearchParams();
   const requestedRole = searchParams.get('role');
 
-  const { loginWithPhone, forceReleaseAdminLock } = useAuthRole();
+  const { loginWithPhone, forceReleaseAdminLock, checkPhoneRegistration } = useAuthRole();
 
   const [selectedRole, setSelectedRole] = useState(
     requestedRole && Object.values(ROLES).includes(requestedRole) ? requestedRole : ROLES.VILLAGER
@@ -84,6 +85,9 @@ export default function LoginPage() {
   const [showSetPinModal, setShowSetPinModal] = useState(false);
   const [isAdminLocked, setIsAdminLocked] = useState(false);
   const [isUnlocking, setIsUnlocking] = useState(false);
+  const [isUnregistered, setIsUnregistered] = useState(false);
+  const [lookupStatus, setLookupStatus] = useState(null); // 'checking' | 'registered' | 'unregistered'
+  const [registeredUserInfo, setRegisteredUserInfo] = useState(null);
 
   // Auto initialize when role is chosen or query param changes
   useEffect(() => {
@@ -95,12 +99,58 @@ export default function LoginPage() {
     }
   }, [requestedRole]);
 
+  // Real-time phone number registration check when typing 10 digits
+  useEffect(() => {
+    const cleanPhone = phone.replace(/\D/g, '');
+    if (cleanPhone.length !== 10) {
+      setLookupStatus(null);
+      setRegisteredUserInfo(null);
+      setIsUnregistered(false);
+      return;
+    }
+
+    let active = true;
+    const runLookup = async () => {
+      setLookupStatus('checking');
+      try {
+        if (checkPhoneRegistration) {
+          const res = await checkPhoneRegistration(cleanPhone, selectedRole);
+          if (!active) return;
+          if (res.isRegistered) {
+            setLookupStatus('registered');
+            setRegisteredUserInfo(res.user);
+            setIsUnregistered(false);
+            setErrorMessage('');
+            if (res.user?.name && !name) {
+              setName(res.user.name);
+            }
+          } else {
+            setLookupStatus('unregistered');
+            setRegisteredUserInfo(null);
+            setIsUnregistered(true);
+          }
+        }
+      } catch {
+        if (active) setLookupStatus(null);
+      }
+    };
+
+    const timer = setTimeout(runLookup, 250);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [phone, selectedRole, checkPhoneRegistration]);
+
   const selectedRoleObj = ROLES_LIST.find(r => r.id === selectedRole) || ROLES_LIST[0];
 
   const handleRoleSelect = (roleId) => {
     setSelectedRole(roleId);
     setErrorMessage('');
     setIsAdminLocked(false);
+    setIsUnregistered(false);
+    setLookupStatus(null);
+    setRegisteredUserInfo(null);
     setPin('');
     // Prefill phone for restricted roles
     const fixedCred = FIXED_CREDENTIALS[roleId];
@@ -175,6 +225,9 @@ export default function LoginPage() {
 
       if (!res.success) {
         setErrorMessage(res.message || 'Login failed. Please check your credentials.');
+        if (res.isUnregistered) {
+          setIsUnregistered(true);
+        }
         if (res.isAdminLocked) {
           setIsAdminLocked(true);
         }
@@ -346,8 +399,45 @@ export default function LoginPage() {
               </div>
             )}
 
+            {/* Unregistered Alert Banner */}
+            {isUnregistered && (
+              <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-300 text-amber-950 space-y-2.5 shadow-sm animate-shake">
+                <div className="flex items-center gap-2 font-black text-xs text-amber-900">
+                  <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                  <span>Phone Number Not Registered</span>
+                </div>
+                <p className="text-2xs text-amber-800 leading-relaxed font-medium">
+                  Mobile number <strong className="font-bold text-amber-950">+91 {phone}</strong> is not registered for <strong>{selectedRoleObj.label}</strong>. Please register this phone number first to create your personnel credentials.
+                </p>
+                <div className="pt-1">
+                  <Link
+                    to={selectedRole === ROLES.VILLAGER ? `/villagers/signup?phone=${phone}` : `/health/signup?role=${selectedRole}&phone=${phone}`}
+                    className="inline-flex items-center gap-1.5 text-xs font-black px-4 py-2 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white shadow-md transition cursor-pointer"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Register This Phone Number Now &rarr;</span>
+                  </Link>
+                </div>
+              </div>
+            )}
+
+            {/* Verified Registered User Banner */}
+            {lookupStatus === 'registered' && (
+              <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-950 flex items-center gap-2.5 text-xs animate-fade-in shadow-2xs">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                <div className="leading-tight">
+                  <span className="font-bold text-emerald-900">
+                    {registeredUserInfo?.name ? `Account recognized: ${registeredUserInfo.name}` : 'Registered Account Recognized'}
+                  </span>
+                  <p className="text-3xs text-emerald-700 mt-0.5">
+                    {selectedRoleObj.requiresPin ? 'Enter your Security PIN below to log in.' : 'Click Log In to continue.'}
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* Error Banner */}
-            {errorMessage && (
+            {errorMessage && !isUnregistered && (
               <div className="p-3.5 bg-red-50 border border-red-200 rounded-xl space-y-1.5 animate-shake shadow-sm">
                 <div className="text-xs text-red-700 flex items-start gap-2.5">
                   <AlertTriangle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
@@ -355,7 +445,7 @@ export default function LoginPage() {
                 </div>
                 <div className="text-2xs text-red-800 pl-6">
                   First time accessing NeerSense?{' '}
-                  <Link to="/first-time-signin" className="font-bold underline text-sky-800 hover:text-sky-950">
+                  <Link to={`/health/signup?role=${selectedRole}&phone=${phone}`} className="font-bold underline text-sky-800 hover:text-sky-950">
                     Sign in & register your personnel account here →
                   </Link>
                 </div>
@@ -377,15 +467,60 @@ export default function LoginPage() {
                     type="tel"
                     maxLength={10}
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
+                    onChange={(e) => {
+                      setPhone(e.target.value.replace(/\D/g, ''));
+                      setIsUnregistered(false);
+                      setErrorMessage('');
+                    }}
                     placeholder="Enter 10-digit number"
                     required
-                    className="w-full pl-12 pr-4 py-3 text-sm border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-400/30 focus:border-sky-500 outline-none font-semibold text-slate-900 bg-white transition-all hover:border-sky-300"
+                    className={`w-full pl-12 pr-10 py-3 text-sm border-2 rounded-xl focus:ring-2 outline-none font-semibold text-slate-900 transition-all ${
+                      isUnregistered
+                        ? 'border-amber-400 focus:border-amber-500 focus:ring-amber-200 bg-amber-50/20'
+                        : lookupStatus === 'registered'
+                        ? 'border-emerald-400 focus:border-emerald-500 focus:ring-emerald-200 bg-white'
+                        : 'border-slate-200 focus:border-sky-500 focus:ring-sky-400/30 bg-white hover:border-sky-300'
+                    }`}
                   />
                   <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-slate-400">
-                    <Phone className="w-4 h-4" />
+                    {lookupStatus === 'checking' ? (
+                      <span className="text-2xs text-sky-600 font-bold animate-pulse">...</span>
+                    ) : lookupStatus === 'registered' ? (
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    ) : isUnregistered ? (
+                      <AlertTriangle className="w-4 h-4 text-amber-500" />
+                    ) : (
+                      <Phone className="w-4 h-4" />
+                    )}
                   </div>
                 </div>
+
+                {/* Live validation feedback */}
+                {lookupStatus === 'checking' && (
+                  <p className="text-3xs text-sky-700 flex items-center gap-1 font-medium animate-pulse mt-1">
+                    <span>Checking database registration for +91 {phone}...</span>
+                  </p>
+                )}
+                {isUnregistered && (
+                  <p className="text-3xs text-amber-700 flex items-center justify-between font-bold mt-1">
+                    <span className="flex items-center gap-1">
+                      <AlertTriangle className="w-3 h-3 text-amber-600" />
+                      Number not registered yet.
+                    </span>
+                    <Link
+                      to={selectedRole === ROLES.VILLAGER ? `/villagers/signup?phone=${phone}` : `/health/signup?role=${selectedRole}&phone=${phone}`}
+                      className="underline text-amber-800 hover:text-amber-950 font-extrabold"
+                    >
+                      Click here to register &rarr;
+                    </Link>
+                  </p>
+                )}
+                {lookupStatus === 'registered' && (
+                  <p className="text-3xs text-emerald-700 flex items-center gap-1 font-semibold mt-1">
+                    <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                    <span>Verified registered phone number</span>
+                  </p>
+                )}
               </div>
 
               {/* Name / Identification — shown only for Villager */}

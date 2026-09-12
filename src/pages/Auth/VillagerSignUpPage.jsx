@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import {
   Droplets,
   ShieldCheck,
@@ -17,14 +17,17 @@ import {
 import { useAuthRole, ROLES } from '../../contexts/AuthRoleContext';
 import { WEST_BENGAL_VILLAGES } from '../../utils/westBengalVillages';
 import { ref, set } from 'firebase/database';
-import { rtdb } from '../../services/firebase';
+import { doc, setDoc } from 'firebase/firestore';
+import { rtdb, db } from '../../services/firebase';
 
 export default function VillagerSignUpPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const queryPhone = (searchParams.get('phone') || '').replace(/\D/g, '').slice(0, 10);
   const { loginWithPhone } = useAuthRole();
 
   const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
+  const [phone, setPhone] = useState(queryPhone);
   const [villageId, setVillageId] = useState('vil-wb-01');
   const [landmark, setLandmark] = useState('');
   const [receiveAlerts, setReceiveAlerts] = useState(true);
@@ -67,17 +70,46 @@ export default function VillagerSignUpPage() {
         role: ROLES.VILLAGER
       };
 
-      // 1. Save to Firebase Realtime Database
+      // 1. Save to Firebase Realtime Database (neersense-1 primary)
       if (rtdb) {
         try {
-          await set(ref(rtdb, `citizens/${cleanPhone}`), citizenRecord);
-          await set(ref(rtdb, `Villagers/profiles/${cleanPhone}`), citizenRecord);
-        } catch (dbErr) {
-          console.warn('Firebase RTDB citizen write error:', dbErr);
+          const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('RTDB timeout')), 3500)
+          );
+          await Promise.race([
+            Promise.all([
+              set(ref(rtdb, `citizens/${cleanPhone}`), citizenRecord),
+              set(ref(rtdb, `villagers/${cleanPhone}`), citizenRecord),
+              set(ref(rtdb, `Villagers/registeredCitizens/${cleanPhone}`), citizenRecord),
+            ]),
+            timeoutPromise
+          ]);
+          console.info('[NeerSense RTDB] ✅ Citizen saved to Realtime Database:', cleanPhone);
+        } catch (rtdbErr) {
+          console.warn('[NeerSense RTDB] Citizen write note:', rtdbErr.message);
         }
       }
 
-      // 2. Also register in local storage
+      // 2. Dual-save to Firestore (neersense-1 secondary/backup)
+      if (db) {
+        try {
+          const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Firestore timeout')), 3500)
+          );
+          await Promise.race([
+            Promise.all([
+              setDoc(doc(db, 'citizens', cleanPhone), citizenRecord, { merge: true }),
+              setDoc(doc(db, 'villagers', cleanPhone), citizenRecord, { merge: true }),
+            ]),
+            timeoutPromise
+          ]);
+          console.info('[NeerSense Firestore] ✅ Citizen saved to Firestore:', cleanPhone);
+        } catch (dbErr) {
+          console.warn('[NeerSense Firestore] Citizen write note:', dbErr.message);
+        }
+      }
+
+      // 3. Register in local storage
       try {
         localStorage.setItem(`citizen_${cleanPhone}`, JSON.stringify(citizenRecord));
       } catch {}
@@ -99,6 +131,9 @@ export default function VillagerSignUpPage() {
         villageName: selectedVillageObj.name,
         regId: `CITIZEN-WB-${cleanPhone.slice(-4)}`
       });
+
+      // Navigate to alert notifications after a short delay
+      setTimeout(() => navigate('/villagers/alerts'), 1800);
 
     } catch (err) {
       setErrorMessage(err.message || 'Registration failed. Please try again.');
@@ -186,11 +221,20 @@ export default function VillagerSignUpPage() {
 
               <button
                 type="button"
+                onClick={() => navigate('/villagers/alerts')}
+                className="w-full py-3 px-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold rounded-xl transition-all shadow-md flex items-center justify-center gap-2 text-sm"
+              >
+                <Bell className="w-4 h-4" />
+                <span>View My Water Alert Notifications</span>
+              </button>
+
+              <button
+                type="button"
                 onClick={() => navigate('/villagers')}
-                className="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition shadow-md flex items-center justify-center gap-2 text-sm"
+                className="w-full py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition shadow-sm flex items-center justify-center gap-2 text-sm"
               >
                 <Home className="w-4 h-4" />
-                <span>Go to Villagers Home Page</span>
+                <span>Go to Villagers Home</span>
               </button>
             </div>
           ) : (
@@ -309,13 +353,21 @@ export default function VillagerSignUpPage() {
                 <span>{isSubmitting ? 'Registering...' : 'Sign Up for Village Alerts'}</span>
               </button>
 
-              <div className="text-center pt-1 border-t border-slate-100">
-                <Link
-                  to="/villagers"
-                  className="text-xs font-bold text-emerald-700 hover:text-emerald-900 underline"
-                >
-                  ← Return to Villagers Home (No signup needed to view reports)
-                </Link>
+              <div className="text-center pt-1 border-t border-slate-100 space-y-2">
+                <div className="flex items-center justify-center gap-3 flex-wrap">
+                  <Link
+                    to="/villagers/login"
+                    className="inline-flex items-center gap-1.5 text-xs font-bold text-sky-700 hover:text-sky-900 bg-sky-50 hover:bg-sky-100 px-3.5 py-1.5 rounded-full border border-sky-200 transition"
+                  >
+                    Already registered? Login
+                  </Link>
+                  <Link
+                    to="/villagers"
+                    className="text-xs font-medium text-slate-500 hover:text-slate-700 underline"
+                  >
+                    ← Return to Home
+                  </Link>
+                </div>
               </div>
             </form>
           )}

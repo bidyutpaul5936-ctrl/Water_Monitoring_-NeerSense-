@@ -40,6 +40,7 @@ export default function AdminLoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [showChangePinModal, setShowChangePinModal] = useState(false);
+  const [isUnregistered, setIsUnregistered] = useState(false);
 
   // Single admin status tracking
   const [isAdminLocked, setIsAdminLocked] = useState(false);
@@ -116,6 +117,9 @@ export default function AdminLoginPage() {
       if (result.success) {
         navigate('/admin');
       } else {
+        if (result.isUnregistered) {
+          setIsUnregistered(true);
+        }
         if (result.isAdminLocked) {
           setIsAdminLocked(true);
         }
@@ -236,9 +240,35 @@ export default function AdminLoginPage() {
               </div>
             )}
 
+            {/* Unregistered Admin Number Warning */}
+            {isUnregistered && (
+              <div className="p-4 rounded-2xl bg-amber-950/90 border-2 border-amber-500/80 text-amber-100 space-y-2.5 shadow-lg animate-shake">
+                <div className="flex items-center gap-2 text-amber-300 font-bold text-xs">
+                  <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0" />
+                  <span>Unregistered Administrator Number</span>
+                </div>
+                <p className="text-2xs text-amber-200/90 leading-relaxed">
+                  Mobile number <strong className="text-white">+91 {phone}</strong> is not registered as the District CDMO. The system strictly authorizes only ONE registered administrator account.
+                </p>
+                <div className="pt-1 flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPhone(FIXED_CREDENTIALS[ROLES.ADMIN]?.phone || '9876543213');
+                      setIsUnregistered(false);
+                      setErrorMessage('');
+                    }}
+                    className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-xl text-2xs font-black transition cursor-pointer shadow-sm"
+                  >
+                    Restore Official CDMO Number (+91 {FIXED_CREDENTIALS[ROLES.ADMIN]?.phone || '9876543213'})
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Login Form */}
             <form onSubmit={handleSubmit} className="space-y-4">
-              {errorMessage && (
+              {errorMessage && !isUnregistered && (
                 <div className="p-3.5 rounded-xl bg-red-900/60 border border-red-500/50 text-xs text-red-200 flex items-center gap-2">
                   <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0" />
                   <span>{errorMessage}</span>
@@ -247,9 +277,24 @@ export default function AdminLoginPage() {
 
               {/* Mobile Phone */}
               <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1">
-                  Designated CDMO Mobile Number <span className="text-indigo-400">*</span>
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-bold text-slate-300">
+                    Designated CDMO Mobile Number <span className="text-indigo-400">*</span>
+                  </label>
+                  {phone.replace(/\D/g, '') !== (FIXED_CREDENTIALS[ROLES.ADMIN]?.phone || '9876543213') && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPhone(FIXED_CREDENTIALS[ROLES.ADMIN]?.phone || '9876543213');
+                        setIsUnregistered(false);
+                        setErrorMessage('');
+                      }}
+                      className="text-3xs text-indigo-300 hover:text-indigo-100 underline cursor-pointer"
+                    >
+                      Use Official Number
+                    </button>
+                  )}
+                </div>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                     <Phone className="w-4 h-4 text-indigo-400" />
@@ -257,13 +302,27 @@ export default function AdminLoginPage() {
                   <input
                     type="tel"
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                    onChange={(e) => {
+                      setPhone(e.target.value.replace(/\D/g, '').slice(0, 10));
+                      setIsUnregistered(false);
+                      setErrorMessage('');
+                    }}
                     placeholder="e.g. 9876543213"
                     maxLength={10}
                     required
-                    className="w-full pl-10 pr-4 py-2.5 text-sm font-mono tracking-wider bg-slate-800/90 border border-slate-700 text-white rounded-xl focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/40 transition"
+                    className={`w-full pl-10 pr-4 py-2.5 text-sm font-mono tracking-wider bg-slate-800/90 border rounded-xl focus:ring-2 transition text-white ${
+                      isUnregistered || (phone.replace(/\D/g, '') !== (FIXED_CREDENTIALS[ROLES.ADMIN]?.phone || '9876543213') && phone.replace(/\D/g, '').length === 10)
+                        ? 'border-amber-500/80 focus:border-amber-400 focus:ring-amber-500/40'
+                        : 'border-slate-700 focus:border-indigo-400 focus:ring-indigo-500/40'
+                    }`}
                   />
                 </div>
+                {phone.replace(/\D/g, '') !== (FIXED_CREDENTIALS[ROLES.ADMIN]?.phone || '9876543213') && phone.replace(/\D/g, '').length === 10 && (
+                  <p className="text-3xs text-amber-300/90 mt-1 flex items-center gap-1 font-medium">
+                    <AlertTriangle className="w-3 h-3 text-amber-400" />
+                    <span>Number +91 {phone} is not the designated CDMO phone.</span>
+                  </p>
+                )}
               </div>
 
               {/* Security PIN */}

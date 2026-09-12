@@ -18,8 +18,6 @@ import {
 } from 'lucide-react';
 import { useAuthRole, ROLES, FIXED_CREDENTIALS } from '../../contexts/AuthRoleContext';
 import ChangePinModal from '../../components/ChangePinModal';
-import { ref, get } from 'firebase/database';
-import { rtdb } from '../../services/firebase';
 
 const HEALTH_ROLES = [
   {
@@ -47,7 +45,7 @@ export default function HealthLoginPage() {
   const [searchParams] = useSearchParams();
   const requestedRole = searchParams.get('role');
 
-  const { loginWithPhone } = useAuthRole();
+  const { loginWithPhone, checkPhoneRegistration } = useAuthRole();
 
   const [selectedRole, setSelectedRole] = useState(
     requestedRole === ROLES.HYGIENE ? ROLES.HYGIENE : ROLES.ASHA
@@ -60,26 +58,8 @@ export default function HealthLoginPage() {
   const [showSetPinModal, setShowSetPinModal] = useState(false);
 
   const [isUnregistered, setIsUnregistered] = useState(false);
-  const [dbStatus, setDbStatus] = useState('checking'); // 'checking' | 'connected' | 'offline'
-
-  // DB connectivity check
-  useEffect(() => {
-    let isMounted = true;
-    const checkDb = async () => {
-      if (!rtdb) {
-        if (isMounted) setDbStatus('offline');
-        return;
-      }
-      try {
-        await get(ref(rtdb, 'system/credentials/asha/phone'));
-        if (isMounted) setDbStatus('connected');
-      } catch {
-        if (isMounted) setDbStatus('offline');
-      }
-    };
-    checkDb();
-    return () => { isMounted = false; };
-  }, []);
+  const [lookupStatus, setLookupStatus] = useState(null); // null | 'checking' | 'registered' | 'unregistered'
+  const [registeredUserInfo, setRegisteredUserInfo] = useState(null);
 
   // Auto-fill role default credentials when toggling roles
   useEffect(() => {
@@ -89,7 +69,49 @@ export default function HealthLoginPage() {
     }
     setErrorMessage('');
     setIsUnregistered(false);
+    setLookupStatus(null);
+    setRegisteredUserInfo(null);
   }, [selectedRole]);
+
+  // Live lookup whenever phone number is entered or changed (10 digits)
+  useEffect(() => {
+    const cleanPhone = phone.replace(/\D/g, '');
+    if (cleanPhone.length !== 10) {
+      setLookupStatus(null);
+      setRegisteredUserInfo(null);
+      setIsUnregistered(false);
+      return;
+    }
+
+    let active = true;
+    const runLookup = async () => {
+      setLookupStatus('checking');
+      try {
+        if (checkPhoneRegistration) {
+          const res = await checkPhoneRegistration(cleanPhone, selectedRole);
+          if (!active) return;
+          if (res.isRegistered) {
+            setLookupStatus('registered');
+            setRegisteredUserInfo(res.user);
+            setIsUnregistered(false);
+            setErrorMessage('');
+          } else {
+            setLookupStatus('unregistered');
+            setRegisteredUserInfo(null);
+            setIsUnregistered(true);
+          }
+        }
+      } catch {
+        if (active) setLookupStatus(null);
+      }
+    };
+
+    const timer = setTimeout(runLookup, 250);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [phone, selectedRole, checkPhoneRegistration]);
 
   const selectedRoleObj = HEALTH_ROLES.find(r => r.id === selectedRole) || HEALTH_ROLES[0];
 
@@ -163,20 +185,6 @@ export default function HealthLoginPage() {
           </div>
 
           <div className="p-6 sm:p-8 space-y-6">
-            
-            {/* Firebase Database Status Pill */}
-            <div className="flex items-center justify-center gap-2 py-1 px-3 rounded-full border text-3xs font-semibold mx-auto w-fit"
-              style={{
-                borderColor: dbStatus === 'connected' ? '#0284c744' : dbStatus === 'offline' ? '#ef444444' : '#0ea5e944',
-                background: dbStatus === 'connected' ? 'rgba(2,132,199,0.08)' : dbStatus === 'offline' ? 'rgba(239,68,68,0.10)' : 'rgba(14,165,233,0.08)',
-                color: dbStatus === 'connected' ? '#0369a1' : dbStatus === 'offline' ? '#dc2626' : '#0284c7',
-              }}>
-              <span className={`w-1.5 h-1.5 rounded-full inline-block ${dbStatus === 'connected' ? 'bg-sky-500 animate-pulse' : dbStatus === 'offline' ? 'bg-red-500' : 'bg-sky-400 animate-pulse'}`}></span>
-              <span>
-                {dbStatus === 'connected' ? 'Firebase Realtime Database Connected' : dbStatus === 'offline' ? 'Database Offline (Local fallback mode)' : 'Connecting to Database...'}
-              </span>
-            </div>
-
             {/* 1. ROLE CHOOSER: STRICTLY ASHA & HYGIENE ONLY */}
             <div>
               <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-2">
@@ -229,28 +237,45 @@ export default function HealthLoginPage() {
 
             {/* Unregistered Alert Banner */}
             {isUnregistered && (
-              <div className="p-4 rounded-2xl bg-amber-50 border-2 border-amber-300 text-amber-900 space-y-2">
-                <div className="flex items-center gap-2 font-bold text-xs">
+              <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-300 text-amber-950 space-y-2.5 shadow-sm animate-shake">
+                <div className="flex items-center gap-2 font-black text-xs text-amber-900">
                   <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />
-                  <span>First-Time Registration Required</span>
+                  <span>Number Not Registered — Registration Required</span>
                 </div>
-                <p className="text-2xs text-amber-800 leading-relaxed">
-                  Mobile number <strong>{phone}</strong> is not yet registered in the NeerSense health staff directory.
+                <p className="text-2xs text-amber-800 leading-relaxed font-medium">
+                  Mobile number <strong className="font-bold text-amber-950">{phone}</strong> is not registered in the NeerSense staff directory for <strong>{selectedRoleObj.label}</strong>. Please register this number to create your credentials and Security PIN.
                 </p>
-                <Link
-                  to={`/health/signup?role=${selectedRole}`}
-                  className="inline-flex items-center gap-1 text-2xs font-black px-3 py-1.5 rounded-lg bg-amber-600 text-white hover:bg-amber-700 transition"
-                >
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <span>Register Account Now &rarr;</span>
-                </Link>
+                <div className="pt-1">
+                  <Link
+                    to={`/health/signup?role=${selectedRole}&phone=${phone}`}
+                    className="inline-flex items-center gap-1.5 text-xs font-black px-4 py-2 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white shadow-md transition cursor-pointer"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Register This Phone Number Now &rarr;</span>
+                  </Link>
+                </div>
+              </div>
+            )}
+
+            {/* Verified Registered User Banner */}
+            {lookupStatus === 'registered' && (
+              <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-950 flex items-center gap-2.5 text-xs animate-fade-in shadow-2xs">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                <div className="leading-tight">
+                  <span className="font-bold text-emerald-900">
+                    {registeredUserInfo?.name ? `Account recognized: ${registeredUserInfo.name}` : 'Registered Account Recognized'}
+                  </span>
+                  <p className="text-3xs text-emerald-700 mt-0.5">
+                    Enter your Security PIN below to log in.
+                  </p>
+                </div>
               </div>
             )}
 
             {/* 2. LOGIN FORM */}
             <form onSubmit={handleSubmit} className="space-y-4">
               {errorMessage && !isUnregistered && (
-                <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-xs text-red-800 flex items-center gap-2">
+                <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-xs text-red-800 flex items-center gap-2 animate-shake">
                   <AlertTriangle className="w-4 h-4 text-red-600 flex-shrink-0" />
                   <span>{errorMessage}</span>
                 </div>
@@ -272,9 +297,38 @@ export default function HealthLoginPage() {
                     placeholder="Enter 10-digit mobile number"
                     maxLength={10}
                     required
-                    className="w-full pl-10 pr-4 py-2.5 text-sm font-mono tracking-wider bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:border-sky-500 focus:ring-2 focus:ring-sky-200 transition"
+                    className={`w-full pl-10 pr-4 py-2.5 text-sm font-mono tracking-wider bg-slate-50 border rounded-xl focus:bg-white focus:ring-2 transition ${
+                      isUnregistered
+                        ? 'border-amber-400 focus:border-amber-500 focus:ring-amber-200 bg-amber-50/20'
+                        : lookupStatus === 'registered'
+                        ? 'border-emerald-400 focus:border-emerald-500 focus:ring-emerald-200'
+                        : 'border-slate-300 focus:border-sky-500 focus:ring-sky-200'
+                    }`}
                   />
                 </div>
+                {/* Live validation caption */}
+                {lookupStatus === 'checking' && (
+                  <p className="text-3xs text-sky-600 mt-1 animate-pulse">
+                    Checking registration status...
+                  </p>
+                )}
+                {lookupStatus === 'unregistered' && (
+                  <div className="mt-1.5 flex items-center justify-between text-2xs text-amber-700 font-semibold">
+                    <span>⚠️ Number not registered</span>
+                    <Link
+                      to={`/health/signup?role=${selectedRole}&phone=${phone}`}
+                      className="underline font-bold text-amber-800 hover:text-amber-950"
+                    >
+                      Click here to register &rarr;
+                    </Link>
+                  </div>
+                )}
+                {lookupStatus === 'registered' && (
+                  <p className="text-3xs text-emerald-700 font-bold mt-1 flex items-center gap-1">
+                    <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                    <span>Verified: {registeredUserInfo?.name || 'Authorized Staff'}</span>
+                  </p>
+                )}
               </div>
 
               {/* Security PIN Input */}
