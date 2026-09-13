@@ -37,7 +37,7 @@ try {
     // ── Realtime Database (primary - Asia Southeast 1) ─────────────────────
     const rtdbUrl = firebaseConfig.databaseURL || 'https://neersense-894ef-default-rtdb.asia-southeast1.firebasedatabase.app';
     rtdb = getDatabase(app, rtdbUrl);
-    console.info(`[NeerSense Firebase] ⚡ Realtime Database connected at ${rtdbUrl}`);
+    // console.info(`[NeerSense Firebase] ⚡ Realtime Database connected at ${rtdbUrl}`);
 
     // ── Firestore (secondary, for water reports / extended data) ───────────
     try {

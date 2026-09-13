@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import {
   Droplets,
@@ -20,6 +20,8 @@ import {
 } from 'lucide-react';
 import { useAuthRole, ROLES } from '../../contexts/AuthRoleContext';
 import { WEST_BENGAL_VILLAGES } from '../../utils/westBengalVillages';
+import { ref, get } from 'firebase/database';
+import { rtdb } from '../../services/firebase';
 
 const ONBOARDING_ROLES = [
   {
@@ -71,10 +73,13 @@ export default function FirstTimeSignInPage() {
   const requestedRole = searchParams.get('role');
   const requestedPhone = (searchParams.get('phone') || '').replace(/\D/g, '').slice(0, 10);
 
+  // Whether the role was forced via URL — lock the selector
+  const isRoleLocked = requestedRole && Object.values(ROLES).includes(requestedRole);
+
   const { registerPersonnel } = useAuthRole();
 
   const [selectedRole, setSelectedRole] = useState(
-    requestedRole && Object.values(ROLES).includes(requestedRole) ? requestedRole : ROLES.ASHA
+    isRoleLocked ? requestedRole : ROLES.ASHA
   );
   const [name, setName] = useState('');
   const [phone, setPhone] = useState(requestedPhone);
@@ -89,7 +94,32 @@ export default function FirstTimeSignInPage() {
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
+  // For admin role: check if already registered in DB
+  const [adminAlreadyRegistered, setAdminAlreadyRegistered] = useState(false);
+  const [checkingAdmin, setCheckingAdmin] = useState(false);
+
   const selectedRoleObj = ONBOARDING_ROLES.find(r => r.id === selectedRole) || ONBOARDING_ROLES[0];
+
+  // When admin role is selected, check if an admin account already exists
+  useEffect(() => {
+    if (selectedRole !== ROLES.ADMIN) { setAdminAlreadyRegistered(false); return; }
+    setCheckingAdmin(true);
+    const checkAdmin = async () => {
+      try {
+        if (rtdb) {
+          const snap = await get(ref(rtdb, 'system_credentials/admin'));
+          if (snap.exists() && snap.val()?.phone) {
+            setAdminAlreadyRegistered(true);
+            setCheckingAdmin(false);
+            return;
+          }
+        }
+      } catch {}
+      setAdminAlreadyRegistered(false);
+      setCheckingAdmin(false);
+    };
+    checkAdmin();
+  }, [selectedRole]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -223,24 +253,36 @@ export default function FirstTimeSignInPage() {
         <div className="bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl shadow-sky-950/40 border-2 border-white/30 overflow-hidden">
           {/* Top Role Selector */}
           <div className="p-6 border-b border-slate-100 bg-slate-50/70">
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">
-              Step 1: Select Your Department Role
-            </label>
+            <div className="flex items-center justify-between mb-3">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">
+                Step 1: Select Your Department Role
+              </label>
+              {isRoleLocked && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-3xs font-bold bg-indigo-100 text-indigo-700 border border-indigo-200">
+                  <Lock className="w-2.5 h-2.5" /> Role Locked
+                </span>
+              )}
+            </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
               {ONBOARDING_ROLES.map((r) => {
                 const isSelected = selectedRole === r.id;
+                const isDisabled = isRoleLocked && r.id !== selectedRole;
                 return (
                   <button
                     key={r.id}
                     type="button"
                     onClick={() => {
+                      if (isRoleLocked) return;
                       setSelectedRole(r.id);
                       setErrorMessage('');
                     }}
-                    className={`p-3 rounded-2xl border-2 text-left transition-all cursor-pointer relative flex flex-col justify-between ${
-                      isSelected
-                        ? 'border-sky-600 bg-sky-50/80 shadow-md ring-2 ring-sky-500/20'
-                        : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50'
+                    disabled={isDisabled}
+                    className={`p-3 rounded-2xl border-2 text-left transition-all relative flex flex-col justify-between ${
+                      isDisabled
+                        ? 'border-slate-100 bg-slate-50 opacity-40 cursor-not-allowed'
+                        : isSelected
+                        ? 'border-sky-600 bg-sky-50/80 shadow-md ring-2 ring-sky-500/20 cursor-pointer'
+                        : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50 cursor-pointer'
                     }`}
                   >
                     <div>
@@ -286,24 +328,28 @@ export default function FirstTimeSignInPage() {
               )}
 
               {/* Step 2: Personal Details */}
-              {selectedRole === ROLES.ADMIN ? (
+              {selectedRole === ROLES.ADMIN && checkingAdmin ? (
+                <div className="p-6 text-center text-slate-500 text-xs animate-pulse">
+                  Checking admin registration status...
+                </div>
+              ) : selectedRole === ROLES.ADMIN && adminAlreadyRegistered ? (
                 <div className="p-6 bg-indigo-50/80 border-2 border-indigo-200 rounded-2xl space-y-3 text-center animate-fade-in">
                   <div className="w-12 h-12 mx-auto rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-700">
                     <ShieldAlert className="w-6 h-6" />
                   </div>
                   <div className="text-sm font-extrabold text-indigo-950">
-                    Sole District Admin Account Already Claimed
+                    Sole District Admin Account Already Registered
                   </div>
                   <p className="text-xs text-indigo-800 leading-relaxed max-w-md mx-auto">
-                    In NeerSense, there is strictly only <strong>ONE</strong> authorized District Admin / CDMO user. Once an Admin is registered, any additional admin registration or login by other users is blocked.
+                    In NeerSense, there is strictly only <strong>ONE</strong> authorized District Admin / CDMO user. The admin account is already registered. Please log in or use <strong>Update Credentials</strong> from the Admin login page.
                   </p>
-                  <div className="pt-2">
+                  <div className="pt-2 flex items-center justify-center gap-3 flex-wrap">
                     <Link
                       to="/login?role=admin"
                       className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-md transition cursor-pointer"
                     >
                       <Lock className="w-3.5 h-3.5" />
-                      <span>Proceed to Authorized Admin Login →</span>
+                      <span>Proceed to Admin Login →</span>
                     </Link>
                   </div>
                 </div>
@@ -481,11 +527,11 @@ export default function FirstTimeSignInPage() {
               )}
 
               {/* Submit CTA */}
-              {selectedRole !== ROLES.ADMIN && (
+              {!(selectedRole === ROLES.ADMIN && adminAlreadyRegistered) && (
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full py-3.5 px-4 bg-gradient-to-r from-sky-600 to-cyan-600 hover:from-sky-700 hover:to-cyan-700 disabled:opacity-50 text-white font-bold rounded-xl text-sm transition shadow-lg shadow-sky-600/25 flex items-center justify-center gap-2 cursor-pointer mt-4"
+                  className={`w-full py-3.5 px-4 disabled:opacity-50 text-white font-bold rounded-xl text-sm transition shadow-lg flex items-center justify-center gap-2 cursor-pointer mt-4 ${selectedRole === ROLES.ADMIN ? "bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 shadow-indigo-600/25" : "bg-gradient-to-r from-sky-600 to-cyan-600 hover:from-sky-700 hover:to-cyan-700 shadow-sky-600/25"}`}
                 >
                 {isSubmitting ? (
                   <span className="flex items-center gap-2">
@@ -524,3 +570,4 @@ export default function FirstTimeSignInPage() {
     </div>
   );
 }
+
