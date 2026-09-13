@@ -1,5 +1,5 @@
 // firebase.js — NeerSense Firebase Initialization
-// Project: neersense-1 | Realtime Database + Firestore
+// Project: neersense-894ef | Realtime Database + Firestore
 
 import { initializeApp, getApps } from 'firebase/app';
 import { getDatabase } from 'firebase/database';
@@ -17,7 +17,7 @@ const firebaseConfig = {
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
   appId:             import.meta.env.VITE_FIREBASE_APP_ID,
   measurementId:     import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
-  databaseURL:       import.meta.env.VITE_FIREBASE_DATABASE_URL || 'https://neersense-1-default-rtdb.asia-southeast1.firebasedatabase.app',
+  databaseURL:       import.meta.env.VITE_FIREBASE_DATABASE_URL || 'https://neersense-894ef-default-rtdb.asia-southeast1.firebasedatabase.app',
 };
 
 export const isFirebaseConfigured = () =>
@@ -35,7 +35,7 @@ try {
     app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
 
     // ── Realtime Database (primary - Asia Southeast 1) ─────────────────────
-    const rtdbUrl = firebaseConfig.databaseURL || 'https://neersense-1-default-rtdb.asia-southeast1.firebasedatabase.app';
+    const rtdbUrl = firebaseConfig.databaseURL || 'https://neersense-894ef-default-rtdb.asia-southeast1.firebasedatabase.app';
     rtdb = getDatabase(app, rtdbUrl);
     console.info(`[NeerSense Firebase] ⚡ Realtime Database connected at ${rtdbUrl}`);
 
