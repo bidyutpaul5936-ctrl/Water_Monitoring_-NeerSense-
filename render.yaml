@@ -2,6 +2,7 @@ services:
   - type: web
     name: neersense
     runtime: node
+    env: static
     region: singapore
     branch: main
     buildCommand: npm install --include=dev && npx vite build
