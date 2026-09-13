@@ -14,8 +14,9 @@ import {
   RefreshCw,
   Unlock
 } from 'lucide-react';
+import { getAuth, updateEmail, updatePassword } from 'firebase/auth';
 import { useAuthRole, ROLES, FIXED_CREDENTIALS } from '../../contexts/AuthRoleContext';
-import ChangePinModal from '../../components/ChangePinModal';
+import ChangeCredentialsModal from '../../components/ChangeCredentialsModal';
 import { ref, get } from 'firebase/database';
 import { rtdb } from '../../services/firebase';
 
@@ -40,6 +41,7 @@ export default function AdminLoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [showChangePinModal, setShowChangePinModal] = useState(false);
+  const [showChangeCredentialsModal, setShowChangeCredentialsModal] = useState(false);
   const [isUnregistered, setIsUnregistered] = useState(false);
 
   // Single admin status tracking
@@ -372,6 +374,14 @@ export default function AdminLoginPage() {
                     <KeyRound className="w-3 h-3 text-indigo-400" />
                     <span>Change PIN</span>
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowChangeCredentialsModal(true)}
+                    className="ml-3 text-2xs font-semibold text-indigo-300 hover:text-indigo-200 underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <KeyRound className="w-3 h-3 text-indigo-400" />
+                    <span>Change Credentials</span>
+                  </button>
                 </div>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
@@ -421,6 +431,10 @@ export default function AdminLoginPage() {
         <ChangePinModal
           isOpen={showChangePinModal}
           onClose={() => setShowChangePinModal(false)}
+        />
+        <ChangeCredentialsModal
+          isOpen={showChangeCredentialsModal}
+          onClose={() => setShowChangeCredentialsModal(false)}
         />
       </div>
     </div>
