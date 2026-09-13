@@ -34,7 +34,7 @@ export default function AdminLoginPage() {
   const navigate = useNavigate();
   const { loginWithPhone, forceReleaseAdminLock } = useAuthRole();
 
-  const [phone, setPhone] = useState(FIXED_CREDENTIALS[ROLES.ADMIN]?.phone || '9876543213');
+  const [phone, setPhone] = useState('');
   const [pin, setPin] = useState('');
   const [showPin, setShowPin] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -46,11 +46,13 @@ export default function AdminLoginPage() {
   const [isAdminLocked, setIsAdminLocked] = useState(false);
   const [activeAdminName, setActiveAdminName] = useState('');
   const [isUnlocking, setIsUnlocking] = useState(false);
+  const [registeredAdminPhone, setRegisteredAdminPhone] = useState('');
+  const [isAdminRegistered, setIsAdminRegistered] = useState(false);
 
   // Firebase RTDB connectivity status
   const [dbStatus, setDbStatus] = useState('checking'); // 'checking' | 'connected' | 'offline'
 
-  // Check on load if an admin session is actively running + DB connectivity
+  // Check on load if an admin session is actively running + DB connectivity + registered admin
   useEffect(() => {
     let isMounted = true;
 
@@ -60,14 +62,27 @@ export default function AdminLoginPage() {
         return;
       }
       try {
-        const snap = await get(ref(rtdb, 'system/adminSession'));
+        const [snap, credSnap] = await Promise.all([
+          get(ref(rtdb, 'system/adminSession')),
+          get(ref(rtdb, 'system_credentials/admin')),
+        ]);
+
         if (isMounted) {
           setDbStatus('connected');
+          if (credSnap.exists() && credSnap.val()?.phone) {
+            const adminP = String(credSnap.val().phone).replace(/\D/g, '');
+            setRegisteredAdminPhone(adminP);
+            setIsAdminRegistered(true);
+          } else {
+            setRegisteredAdminPhone('');
+            setIsAdminRegistered(false);
+          }
+
           if (snap.exists()) {
             const data = snap.val();
             if (data.isLoggedIn) {
               setIsAdminLocked(true);
-              setActiveAdminName(data.name || 'Dr. Suresh Mishra');
+              setActiveAdminName(data.name || 'District Admin');
             } else {
               setIsAdminLocked(false);
             }
@@ -181,20 +196,6 @@ export default function AdminLoginPage() {
           </div>
 
           <div className="p-6 sm:p-7 space-y-5">
-            
-            {/* Firebase Database Status Pill */}
-            <div className="flex items-center justify-center gap-2 py-1 px-3 rounded-full border text-3xs font-semibold mx-auto w-fit"
-              style={{
-                borderColor: dbStatus === 'connected' ? '#22c55e44' : dbStatus === 'offline' ? '#ef444444' : '#6366f144',
-                background: dbStatus === 'connected' ? 'rgba(34,197,94,0.08)' : dbStatus === 'offline' ? 'rgba(239,68,68,0.10)' : 'rgba(99,102,241,0.08)',
-                color: dbStatus === 'connected' ? '#4ade80' : dbStatus === 'offline' ? '#f87171' : '#a5b4fc',
-              }}>
-              <span className={`w-1.5 h-1.5 rounded-full inline-block ${dbStatus === 'connected' ? 'bg-green-400 animate-pulse' : dbStatus === 'offline' ? 'bg-red-400' : 'bg-indigo-400 animate-pulse'}`}></span>
-              <span>
-                {dbStatus === 'connected' ? 'Firebase Realtime Database Connected' : dbStatus === 'offline' ? 'Database Offline (Local fallback)' : 'Connecting to Database...'}
-              </span>
-            </div>
-
             {/* Authorized Officer Badge (Single Admin Enforcement) */}
             <div className="p-3.5 rounded-2xl bg-indigo-950/60 border border-indigo-500/30 flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-indigo-800/80 flex items-center justify-center text-xl shadow-xs">
@@ -240,6 +241,28 @@ export default function AdminLoginPage() {
               </div>
             )}
 
+            {/* Fresh Setup Notice: No Admin Registered Yet */}
+            {!isAdminRegistered && (
+              <div className="p-4 rounded-2xl bg-indigo-950/90 border-2 border-indigo-500/80 text-indigo-100 space-y-2.5 shadow-lg">
+                <div className="flex items-center gap-2 text-indigo-300 font-bold text-xs">
+                  <ShieldCheck className="w-4 h-4 text-indigo-400 flex-shrink-0" />
+                  <span>Setup: No District Admin Registered Yet</span>
+                </div>
+                <p className="text-2xs text-indigo-200/90 leading-relaxed">
+                  The database has been freshly cleared. Register your phone number as the official District CDMO Administrator using the Admin Authorization Key.
+                </p>
+                <div className="pt-1 flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => navigate('/first-time-signin?role=admin')}
+                    className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-2xs font-bold transition shadow-sm inline-flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <span>Register District Admin Account</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Unregistered Admin Number Warning */}
             {isUnregistered && (
               <div className="p-4 rounded-2xl bg-amber-950/90 border-2 border-amber-500/80 text-amber-100 space-y-2.5 shadow-lg animate-shake">
@@ -250,18 +273,28 @@ export default function AdminLoginPage() {
                 <p className="text-2xs text-amber-200/90 leading-relaxed">
                   Mobile number <strong className="text-white">+91 {phone}</strong> is not registered as the District CDMO. The system strictly authorizes only ONE registered administrator account.
                 </p>
-                <div className="pt-1 flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPhone(FIXED_CREDENTIALS[ROLES.ADMIN]?.phone || '9876543213');
-                      setIsUnregistered(false);
-                      setErrorMessage('');
-                    }}
-                    className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-xl text-2xs font-black transition cursor-pointer shadow-sm"
-                  >
-                    Restore Official CDMO Number (+91 {FIXED_CREDENTIALS[ROLES.ADMIN]?.phone || '9876543213'})
-                  </button>
+                <div className="pt-1 flex items-center gap-2 flex-wrap">
+                  {registeredAdminPhone ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPhone(registeredAdminPhone);
+                        setIsUnregistered(false);
+                        setErrorMessage('');
+                      }}
+                      className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-xl text-2xs font-black transition cursor-pointer shadow-sm"
+                    >
+                      Use Registered Admin Number (+91 {registeredAdminPhone})
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => navigate('/first-time-signin?role=admin')}
+                      className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-2xs font-bold transition cursor-pointer shadow-sm"
+                    >
+                      Register This Number as Admin
+                    </button>
+                  )}
                 </div>
               </div>
             )}
@@ -281,17 +314,17 @@ export default function AdminLoginPage() {
                   <label className="block text-xs font-bold text-slate-300">
                     Designated CDMO Mobile Number <span className="text-indigo-400">*</span>
                   </label>
-                  {phone.replace(/\D/g, '') !== (FIXED_CREDENTIALS[ROLES.ADMIN]?.phone || '9876543213') && (
+                  {registeredAdminPhone && phone.replace(/\D/g, '') !== registeredAdminPhone && (
                     <button
                       type="button"
                       onClick={() => {
-                        setPhone(FIXED_CREDENTIALS[ROLES.ADMIN]?.phone || '9876543213');
+                        setPhone(registeredAdminPhone);
                         setIsUnregistered(false);
                         setErrorMessage('');
                       }}
                       className="text-3xs text-indigo-300 hover:text-indigo-100 underline cursor-pointer"
                     >
-                      Use Official Number
+                      Use Registered Number
                     </button>
                   )}
                 </div>
@@ -307,17 +340,17 @@ export default function AdminLoginPage() {
                       setIsUnregistered(false);
                       setErrorMessage('');
                     }}
-                    placeholder="e.g. 9876543213"
+                    placeholder={registeredAdminPhone ? `e.g. ${registeredAdminPhone}` : 'e.g. 9876543213'}
                     maxLength={10}
                     required
                     className={`w-full pl-10 pr-4 py-2.5 text-sm font-mono tracking-wider bg-slate-800/90 border rounded-xl focus:ring-2 transition text-white ${
-                      isUnregistered || (phone.replace(/\D/g, '') !== (FIXED_CREDENTIALS[ROLES.ADMIN]?.phone || '9876543213') && phone.replace(/\D/g, '').length === 10)
+                      isUnregistered || (registeredAdminPhone && phone.replace(/\D/g, '') !== registeredAdminPhone && phone.replace(/\D/g, '').length === 10)
                         ? 'border-amber-500/80 focus:border-amber-400 focus:ring-amber-500/40'
                         : 'border-slate-700 focus:border-indigo-400 focus:ring-indigo-500/40'
                     }`}
                   />
                 </div>
-                {phone.replace(/\D/g, '') !== (FIXED_CREDENTIALS[ROLES.ADMIN]?.phone || '9876543213') && phone.replace(/\D/g, '').length === 10 && (
+                {registeredAdminPhone && phone.replace(/\D/g, '') !== registeredAdminPhone && phone.replace(/\D/g, '').length === 10 && (
                   <p className="text-3xs text-amber-300/90 mt-1 flex items-center gap-1 font-medium">
                     <AlertTriangle className="w-3 h-3 text-amber-400" />
                     <span>Number +91 {phone} is not the designated CDMO phone.</span>

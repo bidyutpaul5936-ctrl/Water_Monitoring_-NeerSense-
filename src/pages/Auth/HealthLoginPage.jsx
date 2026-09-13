@@ -61,12 +61,10 @@ export default function HealthLoginPage() {
   const [lookupStatus, setLookupStatus] = useState(null); // null | 'checking' | 'registered' | 'unregistered'
   const [registeredUserInfo, setRegisteredUserInfo] = useState(null);
 
-  // Auto-fill role default credentials when toggling roles
+  // Reset input form when switching roles
   useEffect(() => {
-    const fixedCred = FIXED_CREDENTIALS[selectedRole];
-    if (fixedCred) {
-      setPhone(fixedCred.phone || '');
-    }
+    setPhone('');
+    setPin('');
     setErrorMessage('');
     setIsUnregistered(false);
     setLookupStatus(null);
