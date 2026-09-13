@@ -196,20 +196,6 @@ export default function AdminLoginPage() {
           </div>
 
           <div className="p-6 sm:p-7 space-y-5">
-            
-            {/* Firebase Database Status Pill */}
-            <div className="flex items-center justify-center gap-2 py-1 px-3 rounded-full border text-3xs font-semibold mx-auto w-fit"
-              style={{
-                borderColor: dbStatus === 'connected' ? '#22c55e44' : dbStatus === 'offline' ? '#ef444444' : '#6366f144',
-                background: dbStatus === 'connected' ? 'rgba(34,197,94,0.08)' : dbStatus === 'offline' ? 'rgba(239,68,68,0.10)' : 'rgba(99,102,241,0.08)',
-                color: dbStatus === 'connected' ? '#4ade80' : dbStatus === 'offline' ? '#f87171' : '#a5b4fc',
-              }}>
-              <span className={`w-1.5 h-1.5 rounded-full inline-block ${dbStatus === 'connected' ? 'bg-green-400 animate-pulse' : dbStatus === 'offline' ? 'bg-red-400' : 'bg-indigo-400 animate-pulse'}`}></span>
-              <span>
-                {dbStatus === 'connected' ? 'Firebase Realtime Database Connected' : dbStatus === 'offline' ? 'Database Offline (Local fallback)' : 'Connecting to Database...'}
-              </span>
-            </div>
-
             {/* Authorized Officer Badge (Single Admin Enforcement) */}
             <div className="p-3.5 rounded-2xl bg-indigo-950/60 border border-indigo-500/30 flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-indigo-800/80 flex items-center justify-center text-xl shadow-xs">
