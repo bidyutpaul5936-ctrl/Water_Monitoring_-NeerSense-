@@ -86,11 +86,11 @@ export const AlertNotificationProvider = ({ children }) => {
           try {
             const { type, data } = JSON.parse(event.data);
             if (type === 'INITIAL_STATE') {
-              if (data.villages) setVillages(data.villages);
-              if (data.waterReports) setWaterReports(data.waterReports);
+              if (data.villages && !api.isUsingRtdb()) setVillages(data.villages);
+              if (data.waterReports && !api.isUsingRtdb()) setWaterReports(data.waterReports);
               if (data.sensors) setSensors(data.sensors);
-              if (data.symptoms) setSymptoms(data.symptoms);
-              if (data.alerts) setAlerts(data.alerts);
+              if (data.symptoms && !api.isUsingRtdb()) setSymptoms(data.symptoms);
+              if (data.alerts && !api.isUsingRtdb()) setAlerts(data.alerts);
             } else if (type === 'WATER_REPORTS_UPDATE') {
               if (Array.isArray(data)) setWaterReports(data);
             } else if (type === 'VILLAGES_UPDATE') {

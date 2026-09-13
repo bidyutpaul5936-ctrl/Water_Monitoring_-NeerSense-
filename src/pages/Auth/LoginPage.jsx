@@ -89,15 +89,15 @@ export default function LoginPage() {
   const [lookupStatus, setLookupStatus] = useState(null); // 'checking' | 'registered' | 'unregistered'
   const [registeredUserInfo, setRegisteredUserInfo] = useState(null);
 
-  // Auto initialize when role is chosen or query param changes
+  // Clean inputs when role is chosen or query param changes
   useEffect(() => {
-    const roleId = requestedRole && Object.values(ROLES).includes(requestedRole) ? requestedRole : selectedRole;
-    const fixedCred = FIXED_CREDENTIALS[roleId];
-    if (fixedCred && fixedCred.requiresPin) {
-      setPhone(fixedCred.phone);
-      setName(fixedCred.name);
-    }
-  }, [requestedRole]);
+    setPhone('');
+    setPin('');
+    setErrorMessage('');
+    setIsUnregistered(false);
+    setLookupStatus(null);
+    setRegisteredUserInfo(null);
+  }, [requestedRole, selectedRole]);
 
   // Real-time phone number registration check when typing 10 digits
   useEffect(() => {

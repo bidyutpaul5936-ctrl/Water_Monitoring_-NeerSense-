@@ -177,11 +177,11 @@ export const api = {
     try {
       if (isUsingRtdb()) {
         const list = await rtdbSymptomService.getAll();
-        if (list && list.length > 0) return list;
+        if (Array.isArray(list)) return list;
       }
       if (isUsingFirestore()) {
         const fsSymptoms = await symptomCaseService.getAll();
-        if (fsSymptoms && fsSymptoms.length > 0) return fsSymptoms;
+        if (Array.isArray(fsSymptoms)) return fsSymptoms;
       }
       return await restGet('/symptoms');
     } catch (err) {
@@ -247,11 +247,11 @@ export const api = {
     try {
       if (isUsingRtdb()) {
         const list = await rtdbAlertService.getAll();
-        if (list && list.length > 0) return list;
+        if (Array.isArray(list)) return list;
       }
       if (isUsingFirestore()) {
         const fsAlerts = await riskDashboardService.getAll();
-        if (fsAlerts && fsAlerts.length > 0) return fsAlerts;
+        if (Array.isArray(fsAlerts)) return fsAlerts;
       }
       return await restGet('/alerts');
     } catch (err) {
@@ -288,11 +288,11 @@ export const api = {
     try {
       if (isUsingRtdb()) {
         const list = await rtdbManualTestService.getAll();
-        if (list && list.length > 0) return list;
+        if (Array.isArray(list)) return list;
       }
       if (isUsingFirestore()) {
         const tests = await manualTestService.getAll();
-        if (tests && tests.length > 0) return tests;
+        if (Array.isArray(tests)) return tests;
       }
       return await restGet('/manual-tests');
     } catch (err) {
@@ -371,11 +371,11 @@ export const api = {
     try {
       if (isUsingRtdb()) {
         const list = await rtdbWaterReportService.getAll();
-        if (list && list.length > 0) return list;
+        if (Array.isArray(list)) return list;
       }
       if (isUsingFirestore()) {
         const fsReports = await waterReportService.getAll();
-        if (fsReports && fsReports.length > 0) return fsReports;
+        if (Array.isArray(fsReports)) return fsReports;
       }
       return await restGet('/water-reports');
     } catch (err) {

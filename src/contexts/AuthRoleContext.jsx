@@ -24,13 +24,13 @@ export const ROLES = {
   ADMIN: 'admin',
 };
 
-// ─── Fixed Credentials for Each Role (Single Admin System) ──────────────────
+// ─── Fixed Credentials Archetypes for Each Role (Single Admin System) ────────
 export const FIXED_CREDENTIALS = {
-  [ROLES.VILLAGER]: { phone: '0000000000', pin: '', name: 'Citizen User', requiresPin: false },
-  [ROLES.ASHA]:     { phone: '9876543211', pin: '5678', name: 'Kuni Majhi (ASHA-071)', requiresPin: true },
-  [ROLES.HYGIENE]:  { phone: '9876543212', pin: '4321', name: 'Dr. Meena Kumari (Hygiene Dept)', requiresPin: true },
-  [ROLES.OFFICIAL]: { phone: '9876543213', pin: '1234', name: 'Dr. Suresh Mishra (CDMO)', requiresPin: true },
-  [ROLES.ADMIN]:    { phone: '9876543213', pin: '1234', name: 'Dr. Suresh Mishra (CDMO)', requiresPin: true },
+  [ROLES.VILLAGER]: { phone: '', pin: '', name: 'Citizen User', requiresPin: false },
+  [ROLES.ASHA]:     { phone: '', pin: '', name: 'ASHA Field Worker', requiresPin: true },
+  [ROLES.HYGIENE]:  { phone: '', pin: '', name: 'Hygiene & Sanitation Officer', requiresPin: true },
+  [ROLES.OFFICIAL]: { phone: '', pin: '', name: 'District CDMO Admin', requiresPin: true },
+  [ROLES.ADMIN]:    { phone: '', pin: '', name: 'District CDMO Admin', requiresPin: true },
 };
 
 const ROLE_DEFAULTS = {
@@ -191,38 +191,9 @@ async function saveAccountToDatabase(account) {
   }
 }
 
-// ─── Seed fixed credentials to RTDB and Firestore ───────────────────────────
+// ─── Do not seed demo credentials — only store real accounts registered by users
 async function seedFixedCredentialsToDatabase() {
-  for (const [role, cred] of Object.entries(FIXED_CREDENTIALS)) {
-    if (role === ROLES.PANCHAYAT) continue;
-    const credData = {
-      phone: cred.phone, pin: cred.pin, name: cred.name,
-      requiresPin: cred.requiresPin, role,
-      createdAt: new Date().toISOString(),
-    };
-
-    // RTDB seed
-    if (rtdb) {
-      try {
-        const existing = await rtdbGet(`system_credentials/${role}`);
-        if (!existing) {
-          await rtdbSet(`system_credentials/${role}`, credData);
-          console.info(`[NeerSense RTDB] ✅ Default credentials seeded for role: ${role}`);
-        }
-      } catch {}
-    }
-
-    // Firestore seed
-    if (db) {
-      try {
-        const credRef = doc(db, 'system_credentials', role);
-        const snap = await getDoc(credRef);
-        if (!snap.exists()) {
-          await setDoc(credRef, credData);
-        }
-      } catch {}
-    }
-  }
+  // Fresh mode: Accounts are stored when real users register via the sign up portal
 }
 
 // ─── Fetch live PIN for a role from RTDB / Firestore ────────────────────────
@@ -241,7 +212,7 @@ async function fetchLivePin(role) {
       if (snap.exists() && snap.data().pin) return String(snap.data().pin);
     } catch {}
   }
-  return FIXED_CREDENTIALS[role]?.pin || '';
+  return '';
 }
 
 export const AuthRoleProvider = ({ children }) => {
@@ -254,7 +225,8 @@ export const AuthRoleProvider = ({ children }) => {
   );
   const [adminActivePage, setAdminActivePage] = useState('admin');
 
-  useEffect(() => { seedFixedCredentialsToDatabase(); }, []);
+  // No automatic demo seeding — fresh DB
+  useEffect(() => {}, []);
 
   // Admin heartbeat
   useEffect(() => {
@@ -293,6 +265,18 @@ export const AuthRoleProvider = ({ children }) => {
         if (citizenSnap) return citizenSnap;
         const villagerSnap = await rtdbGet(`villagers/${cleanPhone}`);
         if (villagerSnap) return villagerSnap;
+        const adminSnap = await rtdbGet('system_credentials/admin');
+        if (adminSnap && String(adminSnap.phone).replace(/\D/g, '') === cleanPhone) {
+          return { ...adminSnap, role: ROLES.ADMIN };
+        }
+        const ashaCredSnap = await rtdbGet('system_credentials/asha');
+        if (ashaCredSnap && String(ashaCredSnap.phone).replace(/\D/g, '') === cleanPhone) {
+          return { ...ashaCredSnap, role: ROLES.ASHA };
+        }
+        const hygCredSnap = await rtdbGet('system_credentials/hygiene');
+        if (hygCredSnap && String(hygCredSnap.phone).replace(/\D/g, '') === cleanPhone) {
+          return { ...hygCredSnap, role: ROLES.HYGIENE };
+        }
       } catch {}
     }
     if (db) {
@@ -309,8 +293,8 @@ export const AuthRoleProvider = ({ children }) => {
     const cleanPhone = (phone || '').replace(/\D/g, '');
     if (cleanPhone.length < 10) return { isRegistered: false };
 
-    // Check fixed role credentials
-    if (role && FIXED_CREDENTIALS[role] && cleanPhone === FIXED_CREDENTIALS[role].phone) {
+    // Check fixed role credentials only if phone is set
+    if (role && FIXED_CREDENTIALS[role]?.phone && cleanPhone === FIXED_CREDENTIALS[role].phone) {
       return {
         isRegistered: true,
         isDefaultDemo: true,
@@ -365,20 +349,27 @@ export const AuthRoleProvider = ({ children }) => {
 
     // Single-admin enforcement
     if (isAdminRole) {
-      let designatedAdminPhone = FIXED_CREDENTIALS[ROLES.ADMIN].phone;
+      let designatedAdminPhone = null;
       if (rtdb) {
         try {
           const snap = await rtdbGet('system_credentials/admin');
           if (snap && snap.phone) designatedAdminPhone = String(snap.phone).replace(/\D/g, '');
         } catch {}
       }
-      if (cleanPhone !== designatedAdminPhone && db) {
+      if (!designatedAdminPhone && db) {
         try {
           const snap = await getDoc(doc(db, 'system_credentials', 'admin'));
           if (snap.exists() && snap.data().phone) {
             designatedAdminPhone = String(snap.data().phone).replace(/\D/g, '');
           }
         } catch {}
+      }
+      if (!designatedAdminPhone) {
+        return {
+          success: false,
+          isUnregistered: true,
+          message: 'No District Admin account has been registered yet. Please click Register to initialize the District Admin account.',
+        };
       }
       if (cleanPhone !== designatedAdminPhone) {
         return {
@@ -434,14 +425,14 @@ export const AuthRoleProvider = ({ children }) => {
       userVillageId   = registeredUser.villageId || userVillageId;
       userVillageName = registeredUser.villageName || userVillageName;
       matchedPin      = registeredUser.pin;
-    } else if (cleanPhone === fixedCred.phone) {
+    } else if (cleanPhone === fixedCred.phone && fixedCred.phone) {
       matchedPin = await fetchLivePin(roleKey);
       userName   = fixedCred.name;
     } else {
       return {
         success: false,
         isUnregistered: true,
-        message: 'No registered personnel account found. Please register first.',
+        message: 'No registered personnel account found for this mobile number. Please click Register to create your account.',
       };
     }
 
@@ -552,6 +543,11 @@ export const AuthRoleProvider = ({ children }) => {
           await rtdbSet(`hygiene_users/${cleanPhone}`, {
             phone: cleanPhone, name: finalName, role: 'HYGIENE',
             department: 'Water Quality & Health Surveillance',
+            pin: pinStr, updatedAt: Date.now(),
+          });
+        } else if (roleKey === ROLES.ADMIN || roleKey === ROLES.OFFICIAL) {
+          await rtdbSet(`admin_users/${cleanPhone}`, {
+            phone: cleanPhone, name: finalName, role: 'ADMIN',
             pin: pinStr, updatedAt: Date.now(),
           });
         }

@@ -23,106 +23,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { useAuthRole, ROLES } from '../../contexts/AuthRoleContext';
-
-// ─── Mock alert data ──────────────────────────────────────────────────────────
-const MOCK_ALERTS = [
-  {
-    id: 'ALT-001',
-    type: 'danger',
-    title: 'BOIL WATER ADVISORY — Gosaba Island',
-    titleBn: 'জল ফুটিয়ে পান করুন — গোসাবা দ্বীপ',
-    body:
-      'Coliform bacteria detected above safe limits (E. coli count: 48 MPN/100mL). DO NOT drink water directly from the tap. Boil all drinking water for at least 5 minutes before consumption.',
-    village: 'Gosaba Island (Rangabelia)',
-    district: 'South 24 Parganas',
-    issuedBy: 'NeerSense Lab Testing Unit',
-    time: '2 hours ago',
-    timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-    resolved: false,
-    icon: 'danger',
-    parameter: 'E. coli',
-    reading: '48 MPN/100mL',
-    safe: '< 0 MPN/100mL',
-    action: 'Boil all water for 5 minutes before drinking. Avoid ice. Use boiled water for cooking.',
-  },
-  {
-    id: 'ALT-002',
-    type: 'warning',
-    title: 'HIGH ARSENIC LEVELS DETECTED — Hingalganj',
-    titleBn: 'উচ্চ আর্সেনিক স্তর — হিঙ্গলগঞ্জ',
-    body:
-      'Arsenic concentration in two tube wells has exceeded safe limits (0.063 mg/L). Prolonged consumption is dangerous. Use only piped water or certified safe sources.',
-    village: 'Hingalganj',
-    district: 'North 24 Parganas',
-    issuedBy: 'State PHE Dept. — Water Testing Lab',
-    time: '1 day ago',
-    timestamp: new Date(Date.now() - 26 * 60 * 60 * 1000).toISOString(),
-    resolved: false,
-    icon: 'arsenic',
-    parameter: 'Arsenic',
-    reading: '0.063 mg/L',
-    safe: '< 0.010 mg/L (WHO)',
-    action: 'Stop using tube well water immediately. Collect safe water from the nearest Jal Jeevan Mission point.',
-  },
-  {
-    id: 'ALT-003',
-    type: 'info',
-    title: 'WATER RESTORED — Basanti Block',
-    titleBn: 'জল নিরাপদ — বাসন্তী ব্লক',
-    body:
-      'Follow-up laboratory tests confirm drinking water quality is now within safe parameters. The boil-water advisory issued on 8 September 2026 has been lifted. Normal consumption is permitted.',
-    village: 'Basanti Block',
-    district: 'South 24 Parganas',
-    issuedBy: 'NeerSense Alert System',
-    time: '2 days ago',
-    timestamp: new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString(),
-    resolved: true,
-    icon: 'safe',
-    parameter: 'Total Coliform',
-    reading: '0 MPN/100mL',
-    safe: '< 0 MPN/100mL',
-    action: 'No action required. Water is safe to drink.',
-  },
-  {
-    id: 'ALT-004',
-    type: 'danger',
-    title: 'TURBIDITY SPIKE — Sandeshkhali',
-    titleBn: 'অস্বচ্ছ জল — সন্দেশখালি',
-    body:
-      'Post-monsoon flooding has caused extreme turbidity (NTU: 86). Contamination with waterborne pathogens (Vibrio cholerae, Salmonella) is likely. Avoid all tap water. Use chlorine tablets if available.',
-    village: 'Sandeshkhali',
-    district: 'North 24 Parganas',
-    issuedBy: 'ASHA Surveillance Network',
-    time: '3 hours ago',
-    timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
-    resolved: false,
-    icon: 'danger',
-    parameter: 'Turbidity',
-    reading: '86 NTU',
-    safe: '< 1 NTU (WHO)',
-    action: 'Use chlorine tablets (1 tablet per litre, wait 30 min). Alternatively use sealed bottled water. Report to ASHA worker.',
-  },
-  {
-    id: 'ALT-005',
-    type: 'safe',
-    title: 'MONTHLY TEST PASSED — Canning Block',
-    titleBn: 'মাসিক পরীক্ষায় উত্তীর্ণ — ক্যানিং ব্লক',
-    body:
-      'Routine monthly water quality check shows all parameters within safe limits. pH: 7.2, Turbidity: 0.4 NTU, Total Coliform: 0 MPN/100mL, Fluoride: 0.5 mg/L.',
-    village: 'Canning Block',
-    district: 'South 24 Parganas',
-    issuedBy: 'State Water Quality Lab — Kolkata',
-    time: '5 days ago',
-    timestamp: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-    resolved: true,
-    icon: 'safe',
-    parameter: 'All Parameters',
-    reading: 'Within Safe Limits',
-    safe: 'WHO / BIS Standards',
-    action: 'No action required. Continue normal water usage.',
-  },
-];
-
+import { useAlertNotification } from '../../contexts/AlertNotificationContext';
 const ALERT_STYLES = {
   danger: {
     border: 'border-red-300',
@@ -254,6 +155,7 @@ function AlertCard({ alert }) {
 export default function VillagerAlertNotificationsPage() {
   const navigate = useNavigate();
   const { currentUser, isAuthenticated, activeRole, logout } = useAuthRole();
+  const { alerts = [], fetchFullState } = useAlertNotification() || {};
   const [filter, setFilter] = useState('all');
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -266,6 +168,7 @@ export default function VillagerAlertNotificationsPage() {
 
   const handleRefresh = () => {
     setIsRefreshing(true);
+    if (fetchFullState) fetchFullState();
     setTimeout(() => setIsRefreshing(false), 1200);
   };
 
@@ -274,14 +177,17 @@ export default function VillagerAlertNotificationsPage() {
     navigate('/villagers');
   };
 
+  const safeAlerts = Array.isArray(alerts) ? alerts : [];
+
   const filteredAlerts =
     filter === 'all'
-      ? MOCK_ALERTS
+      ? safeAlerts
       : filter === 'active'
-      ? MOCK_ALERTS.filter((a) => !a.resolved)
-      : MOCK_ALERTS.filter((a) => a.resolved);
+      ? safeAlerts.filter((a) => !a.resolved)
+      : safeAlerts.filter((a) => a.resolved);
 
-  const activeCount = MOCK_ALERTS.filter((a) => !a.resolved).length;
+  const activeCount = safeAlerts.filter((a) => !a.resolved).length;
+  const resolvedCount = safeAlerts.filter((a) => a.resolved).length;
 
   return (
     <div className="max-w-screen-md mx-auto px-4 py-6 space-y-5">
@@ -341,7 +247,7 @@ export default function VillagerAlertNotificationsPage() {
         {/* Stats row */}
         <div className="mt-4 grid grid-cols-3 gap-2 text-center">
           <div className="bg-white/15 rounded-xl p-2.5">
-            <div className="text-lg font-black">{MOCK_ALERTS.length}</div>
+            <div className="text-lg font-black">{safeAlerts.length}</div>
             <div className="text-3xs text-emerald-200">Total Alerts</div>
           </div>
           <div className="bg-white/15 rounded-xl p-2.5">
@@ -350,7 +256,7 @@ export default function VillagerAlertNotificationsPage() {
           </div>
           <div className="bg-white/15 rounded-xl p-2.5">
             <div className="text-lg font-black text-emerald-300">
-              {MOCK_ALERTS.filter((a) => a.resolved).length}
+              {resolvedCount}
             </div>
             <div className="text-3xs text-emerald-200">Resolved</div>
           </div>
@@ -375,9 +281,9 @@ export default function VillagerAlertNotificationsPage() {
       {/* Filter tabs */}
       <div className="flex items-center gap-2 bg-white rounded-2xl p-1.5 border border-slate-200 shadow-sm">
         {[
-          { key: 'all', label: 'All Alerts', count: MOCK_ALERTS.length },
+          { key: 'all', label: 'All Alerts', count: safeAlerts.length },
           { key: 'active', label: 'Active', count: activeCount },
-          { key: 'resolved', label: 'Resolved', count: MOCK_ALERTS.filter((a) => a.resolved).length },
+          { key: 'resolved', label: 'Resolved', count: resolvedCount },
         ].map((f) => (
           <button
             key={f.key}
