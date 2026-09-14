@@ -64,7 +64,10 @@ export default function Navbar() {
     location.pathname.startsWith('/village') ||
     location.pathname.startsWith('/villagers');
   const isHealthAuth = location.pathname.startsWith('/health');
-  const isAdminAuth = location.pathname.startsWith('/admin/login');
+  const isAdminAuth =
+    location.pathname.startsWith('/admin/login') ||
+    location.pathname.startsWith('/admin/register') ||
+    location.pathname.startsWith('/admin/signup');
 
   // =========================================================================
   // 1. ISOLATED VILLAGERS NAVBAR (ZERO LOGIN, ZERO LOGOUT, ZERO STAFF ACCESS)

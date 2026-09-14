@@ -256,7 +256,7 @@ export default function AdminLoginPage() {
                 <div className="pt-1 flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => navigate('/first-time-signin?role=admin')}
+                    onClick={() => navigate('/admin/register')}
                     className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-2xs font-bold transition shadow-sm inline-flex items-center gap-1.5 cursor-pointer"
                   >
                     <span>Register District Admin Account</span>
@@ -291,7 +291,7 @@ export default function AdminLoginPage() {
                   ) : (
                     <button
                       type="button"
-                      onClick={() => navigate('/first-time-signin?role=admin')}
+                      onClick={() => navigate('/admin/register')}
                       className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-2xs font-bold transition cursor-pointer shadow-sm"
                     >
                       Register This Number as Admin
@@ -431,6 +431,8 @@ export default function AdminLoginPage() {
         <ChangePinModal
           isOpen={showChangePinModal}
           onClose={() => setShowChangePinModal(false)}
+          initialRole={ROLES.ADMIN}
+          initialPhone={registeredAdminPhone || phone}
         />
         <ChangeCredentialsModal
           isOpen={showChangeCredentialsModal}
