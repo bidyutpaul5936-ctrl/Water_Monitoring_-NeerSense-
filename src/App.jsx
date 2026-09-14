@@ -13,6 +13,7 @@ import NotificationToast from './components/NotificationToast';
 import HealthLoginPage from './pages/Auth/HealthLoginPage';
 import HealthSignUpPage from './pages/Auth/HealthSignUpPage';
 import AdminLoginPage from './pages/Auth/AdminLoginPage';
+import AdminRegisterPage from './pages/Auth/AdminRegisterPage';
 import VillagerSignUpPage from './pages/Auth/VillagerSignUpPage';
 import VillagerLoginPage from './pages/Auth/VillagerLoginPage';
 
@@ -23,6 +24,15 @@ import VillagerAlertNotificationsPage from './pages/Villagers/VillagerAlertNotif
 import AshaPage from './pages/Asha';
 import HygienePage from './pages/Hygiene';
 import AdminPage from './pages/Admin';
+
+function FirstTimeSignInRedirect() {
+  const location = useLocation();
+  const params = new URLSearchParams(location.search);
+  if (params.get('role') === 'admin' || params.get('role') === 'official') {
+    return <Navigate to="/admin/register" replace />;
+  }
+  return <Navigate to="/health/signup" replace />;
+}
 
 function MainLayout() {
   const location = useLocation();
@@ -55,6 +65,8 @@ function MainLayout() {
 
           {/* ─── 3. DISTRICT ADMIN / CDMO AUTH (Admin Only, Single Admin) ─── */}
           <Route path="/admin/login" element={<AdminLoginPage />} />
+          <Route path="/admin/register" element={<AdminRegisterPage />} />
+          <Route path="/admin/signup" element={<AdminRegisterPage />} />
 
           {/* Department Portals (Protected by GovernmentAuthGate) */}
           <Route path="/asha" element={<AshaPage />} />
@@ -63,7 +75,7 @@ function MainLayout() {
 
           {/* Legacy / Direct Route Fallbacks */}
           <Route path="/login" element={<Navigate to="/health/login" replace />} />
-          <Route path="/first-time-signin" element={<Navigate to="/health/signup" replace />} />
+          <Route path="/first-time-signin" element={<FirstTimeSignInRedirect />} />
           <Route path="/register" element={<Navigate to="/health/signup" replace />} />
           <Route path="/signup" element={<Navigate to="/health/signup" replace />} />
 

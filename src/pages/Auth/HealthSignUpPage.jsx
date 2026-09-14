@@ -104,10 +104,11 @@ export default function HealthSignUpPage() {
       });
 
       if (result.success) {
-        setSuccessMessage(`Personnel account created successfully for ${name.trim()}! Redirecting to login...`);
+        const dest = selectedRole === ROLES.ASHA ? '/asha' : '/hygiene';
+        setSuccessMessage(`Account registered for ${name.trim()}! Redirecting directly to your portal...`);
         setTimeout(() => {
-          navigate(`/health/login?role=${selectedRole}`);
-        }, 1500);
+          navigate(dest);
+        }, 1200);
       } else {
         setErrorMessage(result.message || 'Registration failed. Please try again.');
       }
